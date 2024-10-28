@@ -20,6 +20,8 @@ const connectionString = process.env.DB_CONNECTION_STRING;
 
 app.get('/api/items', async (req, res) => {
   let connection;
+  const search = req.query.search; // Capturamos el término de búsqueda del query string
+
   try {
     console.log('Attempting to connect to database...');
     connection = await odbc.connect(connectionString);
@@ -28,14 +30,21 @@ app.get('/api/items', async (req, res) => {
     console.log('Executing query...');
     await connection.query('SET SCHEMA RYLPHARMA');
 
-    const result = await connection.query('SELECT "FrgnName" FROM "OITM" WHERE "frozenFor" = \'N\'  ORDER BY "ItemName"');
+    // Modificamos la consulta para que incluya el filtro de búsqueda
+    const query = `
+      SELECT "ItemCode", "ItemName"
+      FROM "OITM"
+      WHERE "frozenFor" = 'N'
+      ${search ? `AND (LOWER("ItemName") LIKE LOWER('%${search}%') OR LOWER("ItemCode") = LOWER('${search}'))` : ''}
+      ORDER BY "ItemName"
+    `;
+
+    const result = await connection.query(query);
     console.log('Query executed successfully');
-    //console.log(result);
 
     const items = result.map(item => ({
       id: item.ItemCode,
-      name: item.FrgnName,
-      //price: parseFloat(item.ItemPrice)
+      name: item.ItemName,
     }));
 
     res.json(items);
