@@ -11,14 +11,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "express": "^4.21.1",
-    "odbc": "^2.4.9",
+    "axios": "^1.6.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "googleapis": "^144.0.0",
     "lucide-react": "^0.344.0",
+    "odbc": "^2.4.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "axios": "^1.6.7"
+    "react-toastify": "^10.0.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
@@ -31,6 +33,7 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
+    "nodemon": "^3.1.7",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",

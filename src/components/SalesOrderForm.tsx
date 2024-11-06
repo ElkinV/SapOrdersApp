@@ -3,6 +3,7 @@ import { SalesOrder, SalesOrderItem } from '../types';
 import ItemSelectionModal, { Item } from './ItemSelectionModal';
 import { Plus } from 'lucide-react';
 import CustomerSelectionModal, { Customer } from './CustomerSelectionModal';
+import { ToastContainer, toast } from 'react-toastify';
 //import './styles.css'; // Asegúrate de importar el CSS
 
 interface SalesOrderFormProps {
@@ -12,6 +13,7 @@ interface SalesOrderFormProps {
 const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) => {
   const [customerName, setCustomerName] = useState('');
   const [cardCode, setCardCode] = useState('');
+  const [priceList, setPriceList] = useState<number | null>(null);
   const [items, setItems] = useState<SalesOrderItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -45,7 +47,9 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create order');
+        const errorDetails = await response.json();
+        const errorMessage = errorDetails.error?.message?.value || 'Failed to create order';
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -54,9 +58,13 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
       onCreateSalesOrder(newOrder);
       setCustomerName('');
       setItems([]);
+      
+      toast.success('Orden de venta creada exitosamente!');
     } catch (err) {
       console.error('Error creating order:', err);
-      setError('Failed to create order. Please try again.');
+      setError(err.message);
+
+      toast.error(`Error al crear la orden: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -79,158 +87,177 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
     setIsModalOpen(true);
   };
 
-  const handleSelectItem = (selectedItem: Item) => {
-    if (currentEditIndex !== null) {
-      const newItems = [...items];
-      newItems[currentEditIndex] = {
-        name: selectedItem.name,
-        itemCode: selectedItem.id,
-        quantity: selectedItem.quantity,
-        unitPrice: selectedItem.unitPrice
-      };
-      setItems(newItems);
-      setCurrentEditIndex(null);
+  const handleSelectItem = async (selectedItem: Item) => {
+    if (currentEditIndex !== null && priceList !== null) {
+      try {
+        const response = await fetch(`http://localhost:3001/api/item-price?itemCode=${selectedItem.id}&priceList=${priceList}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch item price');
+        }
+        const priceData = await response.json();
+        const newItems = [...items];
+        newItems[currentEditIndex] = {
+          name: selectedItem.name,
+          itemCode: selectedItem.id,
+          quantity: selectedItem.quantity,
+          unitPrice: priceData.price
+        };
+        setItems(newItems);
+        setCurrentEditIndex(null);
+      } catch (error) {
+        console.error('Error fetching item price:', error);
+        toast.error('Error al obtener el precio del artículo.');
+      }
     }
   };
 
   const handleSelectCustomer = (selectedCustomer: Customer) => {
     setCardCode(selectedCustomer.id);
     setCustomerName(selectedCustomer.name);
+    setPriceList(selectedCustomer.priceList);
   };
 
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex items-center space-x-4">
-        <div className="flex-1">
-          <label htmlFor="cardCode" className="block text-sm font-medium text-gray-700">
-            Código del Cliente
-          </label>
-          <input
-            type="text"
-            id="cardCode"
-            value={cardCode}
-            className="mt-1 block w-full rounded-md bg-gray-50 border-gray-800 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-            readOnly
-          />
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex items-center space-x-4">
+          <div className="flex-1">
+            <label htmlFor="cardCode" className="block text-sm font-medium text-gray-700">
+              Código del Cliente
+            </label>
+            <input
+              type="text"
+              id="cardCode"
+              value={cardCode}
+              className="mt-1 block w-full rounded-md bg-gray-50 border-gray-800 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              readOnly
+              required
+            />
+          </div>
+          <div className="flex-1">
+            <label htmlFor="customerName" className="block text-sm font-medium text-gray-700">
+              Nombre del Cliente
+            </label>
+            <input
+              type="text"
+              id="customerName"
+              value={customerName}
+              className="mt-1 block w-full rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              readOnly
+              required
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCustomerModalOpen(true)}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+          >
+            Seleccionar Cliente
+          </button>
         </div>
-        <div className="flex-1">
-          <label htmlFor="customerName" className="block text-sm font-medium text-gray-700">
-            Nombre del Cliente
+        <span className="flex items-center">
+          <span className="h-px flex-1 bg-gray-300"></span>
+          <span className="block text-sm font-medium text-gray-700 shrink-0 px-6 ">Articulos</span>
+          <span className="h-px flex-1 bg-gray-300"></span>
+        </span>
+        {items.map((item, index) => (
+          <div key={index} className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={item.itemCode}
+                onChange={(e) => handleItemChange(index, 'itemCode', e.target.value)}
+                className="block w-1/2 rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                readOnly
+                required
+              />
+              <input
+                type="text"
+                value={item.name}
+                onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                className="block w-1/2 rounded-md border-black shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 "
+                readOnly
+                required
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentEditIndex(index);
+                  setIsModalOpen(true);
+                }}
+                className="px-2 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Editar
+              </button>
+            </div>
+            <div className="flex space-x-2">
+              <input
+                type="number"
+                placeholder="Cantidad"
+                value={item.quantity}
+                onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                min="1"
+                className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                required
+              />
+              <input
+                type="number"
+                placeholder="Precio"
+                value={item.unitPrice}
+                onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
+                min="0"
+                step="0.01"
+                className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                required
+                readOnly
+              />
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={addItem}
+          className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
+        >
+          <Plus size={18} className="mr-2"/>
+          Añadir Articulo
+        </button>
+        {error && <p className="text-red-500">{error}</p>}
+        <span className="flex items-center">
+          <span className="h-px flex-1 bg-gray-300"></span>
+        </span>
+        <div>
+          <label htmlFor="comments" className="block text-sm font-medium text-gray-700">
+            Comentarios
           </label>
-          <input
-            type="text"
-            id="customerName"
-            value={customerName}
-            className="mt-1 block w-full rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-            readOnly
+          <textarea
+            id="comments"
+            value={comments}
+            onChange={(e) => setComments(e.target.value)}
+            className="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
           />
         </div>
         <button
-          type="button"
-          onClick={() => setIsCustomerModalOpen(true)}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+          type="submit"
+          className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
+          disabled={isSubmitting}
         >
-          Seleccionar Cliente
+          {isSubmitting ? 'Creating Order...' : 'Crear Orden de venta'}
         </button>
-      </div>
-      <span className="flex items-center">
-        <span className="h-px flex-1 bg-gray-300"></span>
-        <span className="block text-sm font-medium text-gray-700 shrink-0 px-6 ">Articulos</span>
-        <span className="h-px flex-1 bg-gray-300"></span>
-      </span>
-      {items.map((item, index) => (
-        <div key={index} className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <input
-              type="text"
-              value={item.itemCode}
-              onChange={(e) => handleItemChange(index, 'itemCode', e.target.value)}
-              className="block w-1/2 rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              readOnly
-            />
-            <input
-              type="text"
-              value={item.name}
-              onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-              className="block w-1/2 rounded-md border-black shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 "
-              readOnly
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentEditIndex(index);
-                setIsModalOpen(true);
-              }}
-              className="px-2 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-            >
-              Editar
-            </button>
-          </div>
-          <div className="flex space-x-2">
-            <input
-              type="number"
-              placeholder="Cantidad"
-              value={item.quantity}
-              onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-              min="1"
-              className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              required
-            />
-            <input
-              type="number"
-              placeholder="Precio"
-              value={item.unitPrice}
-              onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-              min="0"
-              step="0.01"
-              className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              required
-            />
-          </div>
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={addItem}
-        className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
-      >
-        <Plus size={18} className="mr-2"/>
-        Añadir Articulo
-      </button>
-      {error && <p className="text-red-500">{error}</p>}
-      <span className="flex items-center">
-        <span className="h-px flex-1 bg-gray-300"></span>
-      </span>
-      <div>
-        <label htmlFor="comments" className="block text-sm font-medium text-gray-700">
-          Comentarios
-        </label>
-        <textarea
-          id="comments"
-          value={comments}
-          onChange={(e) => setComments(e.target.value)}
-          className="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+        <ItemSelectionModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSelectItem={handleSelectItem}
         />
-      </div>
-      <button
-        type="submit"
-        className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? 'Creating Order...' : 'Crear Orden de venta'}
-      </button>
-      <ItemSelectionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelectItem={handleSelectItem}
-      />
-      <CustomerSelectionModal
-        isOpen={isCustomerModalOpen}
-        onClose={() => setIsCustomerModalOpen(false)}
-        onSelectCustomer={handleSelectCustomer}
-      />
-    </form>
+        <CustomerSelectionModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          onSelectCustomer={handleSelectCustomer}
+        />
+      </form>
+      <ToastContainer />
+    </>
   );
 };
 
