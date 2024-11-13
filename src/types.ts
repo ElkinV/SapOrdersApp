@@ -13,4 +13,5 @@ export interface SalesOrder {
   total: number;
   date: string;
   comments: string;
+  user: string;
 }

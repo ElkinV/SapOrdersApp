@@ -69,7 +69,7 @@ app.post('/api/orders', async (req, res) => {
   try {
     token = await loginToServiceLayer();
 
-    const { cardCode, items, comments } = req.body;
+    const { cardCode, items, comments, user } = req.body;
 
     // Función para formatear la fecha en formato yyyymmdd
     const formatDate = (date) => {
@@ -88,6 +88,7 @@ app.post('/api/orders', async (req, res) => {
       Rate: 0.0,
       Comments: comments,
       U_RL_Origen: "WEBAPP",
+      U_RL_Usuario: user,
       DocumentLines: items.map(item => ({
         ItemCode: item.itemCode,
         Quantity: item.quantity,
@@ -173,13 +174,16 @@ app.get('/api/customers', async (req, res) => {
 
 app.get('/api/orderslist', async (req, res) => {
   let connection;
+  const username = 120
+  console.log(username)
+
   try {
     console.log('Attempting to connect to database...');
     connection = await odbc.connect(connectionString);
     console.log('Connected to database successfully');
 
     await connection.query('SET SCHEMA PRUEBA_20241101');
-    const result = await connection.query('SELECT top 20 "CardCode", "CardName", "DocDate" FROM "ORDR" WHERE "U_RL_Origen"=\'WEBAPP\'');
+    const result = await connection.query('SELECT top 20 "CardCode", "CardName", "DocDate" FROM "ORDR" WHERE "U_RL_Origen"=\'WEBAPP\' and "U_RL_Usuario"=' + `\'${username}\'`);
 
 
     const orders = result.map(item => ({
@@ -254,11 +258,12 @@ app.post('/api/login', async (req, res) => {
     console.log(result[0])
 
     let credentials = result[0]
+    let USERID = credentials.USERID
 
     if (username === credentials.USER_CODE && password === credentials.USERID.toString()) {
-      // Generar un token (puedes usar JWT o cualquier otro método)
+
       const token = 'your_generated_token'; // Reemplaza esto con un token real
-      res.json({ token });
+      res.json({USERID, token });
     } else {
       res.status(401).json({ error: 'Credenciales inválidas' });
     }
@@ -269,6 +274,47 @@ app.post('/api/login', async (req, res) => {
   }
 
 
+});
+
+app.get('/api/get-userid', async (req, res) => {
+  let connection;
+  const { username } = req.query; // Capturamos el username del query string
+
+  try {
+    console.log('Attempting to connect to database...');
+    connection = await odbc.connect(connectionString);
+    console.log('Connected to database successfully');
+
+    console.log('Executing query...');
+    await connection.query('SET SCHEMA RYLPHARMA');
+
+    const query = `
+      SELECT "USERID" 
+      FROM "OUSR" 
+      WHERE "USER_CODE" = ?
+    `;
+
+    const result = await connection.query(query, [username]);
+    console.log('Query executed successfully');
+
+    if (result.length > 0) {
+      res.json({ USERID: result[0].USERID });
+    } else {
+      res.status(404).json({ error: 'USERID not found' });
+    }
+  } catch (error) {
+    console.error('Error in /api/get-userid:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+        console.log('Database connection closed');
+      } catch (closeError) {
+        console.error('Error closing database connection:', closeError);
+      }
+    }
+  }
 });
 
 

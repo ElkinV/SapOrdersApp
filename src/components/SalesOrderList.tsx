@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { SalesOrder } from '../types';
 
+
+
 interface SalesOrderListProps {
   salesOrders: SalesOrder[];
+  username: string | null;
 }
 
-const SalesOrderList: React.FC<SalesOrderListProps> = () => {
+
+const SalesOrderList: React.FC<SalesOrderListProps> = ({username}) => {
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
+  console.log(username)
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/orderslist');
+        const response = await fetch(`http://localhost:3001/api/orderslist?username=${username}`);
         const data = await response.json();
         setSalesOrders(data);
       } catch (error) {
@@ -19,8 +24,10 @@ const SalesOrderList: React.FC<SalesOrderListProps> = () => {
       }
     };
 
-    fetchOrders();
-  }, []);
+    if (username) { // Asegúrate de que username no sea nulo
+      fetchOrders();
+    }
+  }, [username]); // Dependencia para ejecutar el efecto cuando username cambie
 
   return (
     <div className="space-y-4">

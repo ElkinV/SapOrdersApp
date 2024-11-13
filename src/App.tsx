@@ -58,9 +58,9 @@ function App() {
             {activeTab === 'login' ? (
               <Login onLogin={handleLogin} />
             ) : activeTab === 'create' ? (
-              <SalesOrderForm onCreateSalesOrder={handleCreateSalesOrder} />
+              <SalesOrderForm onCreateSalesOrder={handleCreateSalesOrder} username={username} />
             ) : (
-              <SalesOrderList salesOrders={salesOrders} />
+              <SalesOrderList salesOrders={salesOrders} username={username} />
             )}
           </div>
         </div>

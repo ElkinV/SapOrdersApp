@@ -4,13 +4,14 @@ import ItemSelectionModal, { Item } from './ItemSelectionModal';
 import { Plus } from 'lucide-react';
 import CustomerSelectionModal, { Customer } from './CustomerSelectionModal';
 import { ToastContainer, toast } from 'react-toastify';
-//import './styles.css'; // Asegúrate de importar el CSS
+
 
 interface SalesOrderFormProps {
   onCreateSalesOrder: (order: SalesOrder) => void;
+  username: string | null;
 }
 
-const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) => {
+const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, username }) => {
   const [customerName, setCustomerName] = useState('');
   const [cardCode, setCardCode] = useState('');
   const [priceList, setPriceList] = useState<number | null>(null);
@@ -28,6 +29,22 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
     setIsSubmitting(true);
     setError(null);
 
+    let userId: string | null = null;
+    try {
+        const userResponse = await fetch(`http://localhost:3001/api/get-userid?username=${username}`);
+        if (!userResponse.ok) {
+            throw new Error('Failed to fetch USERID');
+        }
+        const userData = await userResponse.json();
+        userId = userData.USERID;
+    } catch (err) {
+        console.error('Error fetching USERID:', err);
+        setError(err.message);
+        toast.error(`Error al obtener el USERID: ${err.message}`);
+        setIsSubmitting(false);
+        return;
+    }
+
     const newOrder: SalesOrder = {
       customerName: customerName,
       cardCode: cardCode,
@@ -35,6 +52,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
       items ,
       total: items.reduce((sum, item) => sum + item.quantity * (item.unitPrice || 0), 0),
       comments: comments,
+      user: userId,
     };
 
     try {
@@ -166,7 +184,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
             <div className="flex items-center space-x-2">
               <input
                 type="text"
-                value={item.itemCode}
+                value={item.itemCode ?? ''}
                 onChange={(e) => handleItemChange(index, 'itemCode', e.target.value)}
                 className="block w-1/2 rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                 readOnly
@@ -174,7 +192,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
               />
               <input
                 type="text"
-                value={item.name}
+                value={item.name ?? ''}
                 onChange={(e) => handleItemChange(index, 'name', e.target.value)}
                 className="block w-1/2 rounded-md border-black shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 "
                 readOnly
@@ -195,7 +213,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
               <input
                 type="number"
                 placeholder="Cantidad"
-                value={item.quantity}
+                value={item.quantity ?? 1}
                 onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                 min="1"
                 className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
@@ -204,7 +222,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder }) =
               <input
                 type="number"
                 placeholder="Precio"
-                value={item.unitPrice}
+                value={item.unitPrice ?? 0}
                 onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
                 min="0"
                 step="0.01"
