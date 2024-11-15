@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import Login from './components/Login';
 import { Package, List } from 'lucide-react';
 import Header from './components/Header';
@@ -9,19 +10,28 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'create' | 'view' | 'login'>('login');
-  const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
-  const [token, setToken] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('login');
+  const [salesOrders, setSalesOrders] = useState<any[]>([]);
 
   const handleCreateSalesOrder = (newOrder: SalesOrder) => {
     setSalesOrders([...salesOrders, { ...newOrder, id: Date.now() }]);
   };
 
-  const handleLogin = (token: string, username: string) => {
+  const handleLogin = async (token: string, username: string) => {
     setToken(token);
     setUsername(username);
     setActiveTab('create');
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/get-userid?username=${username}`);
+      const userData = await response.json();
+      setUserId(userData.USERID);
+    } catch (error) {
+      console.error('Error fetching userId:', error);
+    }
   };
 
   return (
@@ -60,7 +70,7 @@ function App() {
             ) : activeTab === 'create' ? (
               <SalesOrderForm onCreateSalesOrder={handleCreateSalesOrder} username={username} />
             ) : (
-              <SalesOrderList salesOrders={salesOrders} username={username} />
+              <SalesOrderList salesOrders={salesOrders} username={username} userId={userId} />
             )}
           </div>
         </div>

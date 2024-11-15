@@ -222,7 +222,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
               <input
                 type="number"
                 placeholder="Precio"
-                value={item.unitPrice ?? 0}
+                value={item.unitPrice}
                 onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
                 min="0"
                 step="0.01"

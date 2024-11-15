@@ -3,10 +3,8 @@ import odbc from 'odbc';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import axios from 'axios';
-// Importar las funciones de SapLogin.js
+import { encrypt, decrypt } from './encryptUtils.js';
 import { loginToServiceLayer, logoutToServiceLayer, agent, serviceLayerUrl } from './SapLogin.js';
-
-import {spreadsheetId, googleSheets, auth} from "./spreadsheet.cjs";
 
 
 dotenv.config();
@@ -19,6 +17,36 @@ app.use(cors());
 app.use(express.json());
 
 const connectionString = process.env.DB_CONNECTION_STRING;
+
+
+
+// Endpoint para cifrar datos
+app.post('/api/encrypt', (req, res) => {
+  const { text, key } = req.body;
+  if (!text || !key) {
+    return res.status(400).json({ error: 'Text and encryption key are required' });
+  }
+  try {
+    const encryptedText = encrypt(text, key);
+    res.json({ encrypted: encryptedText });
+  } catch (error) {
+    res.status(500).json({ error: 'Encryption failed' });
+  }
+});
+
+// Endpoint para descifrar datos
+app.post('/api/decrypt', (req, res) => {
+  const { encryptedText, key } = req.body;
+  if (!encryptedText || !key) {
+    return res.status(400).json({ error: 'Encrypted text and encryption key are required' });
+  }
+  try {
+    const decryptedText = decrypt(encryptedText, key);
+    res.json({ decrypted: decryptedText });
+  } catch (error) {
+    res.status(400).json({ error: 'Invalid encrypted text or key' });
+  }
+});
 
 app.get('/api/items', async (req, res) => {
   let connection;
@@ -174,8 +202,7 @@ app.get('/api/customers', async (req, res) => {
 
 app.get('/api/orderslist', async (req, res) => {
   let connection;
-  const username = 120
-  console.log(username)
+  const { userId } = req.query; // Capturamos el USERID del query string
 
   try {
     console.log('Attempting to connect to database...');
@@ -183,8 +210,7 @@ app.get('/api/orderslist', async (req, res) => {
     console.log('Connected to database successfully');
 
     await connection.query('SET SCHEMA PRUEBA_20241101');
-    const result = await connection.query('SELECT top 20 "CardCode", "CardName", "DocDate" FROM "ORDR" WHERE "U_RL_Origen"=\'WEBAPP\' and "U_RL_Usuario"=' + `\'${username}\'`);
-
+    const result = await connection.query('SELECT top 20 "CardCode", "CardName", "DocDate" FROM "ORDR" WHERE "U_RL_Origen"=\'WEBAPP\' and "U_RL_Usuario"=' + `\'${userId}\'`);
 
     const orders = result.map(item => ({
       cardCode: item.CardCode,
@@ -196,6 +222,15 @@ app.get('/api/orderslist', async (req, res) => {
   } catch (error) {
     console.error('Error fetching orders:', error);
     res.status(500).json({ error: 'Error fetching orders', details: error.message });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+        console.log('Database connection closed');
+      } catch (closeError) {
+        console.error('Error closing database connection:', closeError);
+      }
+    }
   }
 });
 
@@ -252,18 +287,23 @@ app.post('/api/login', async (req, res) => {
     console.log('Executing query...');
     await connection.query('SET SCHEMA RYLPHARMA');
 
-    let query = 'select "USERID", "USER_CODE"  from OUSR where "USERID"=\'WEBAPP\' and "USERID"='+  `'${username}'`
+    let query = 'select "U_RL_ClaveWeb", "USER_CODE"  from OUSR where "USERID"=\'WEBAPP\' and "USERID"='+  `'${username}'`
     console.log(query)
-    const result = await connection.query('select "USERID", "USER_CODE"  from OUSR where "USER_CODE"=\''+username.toString()+"\'" );
+    const result = await connection.query('select "U_RL_ClaveWeb", "USER_CODE"  from OUSR where "USER_CODE"=\''+username.toString()+"\'" );
     console.log(result[0])
 
     let credentials = result[0]
-    let USERID = credentials.USERID
+    let password1 = credentials.U_RL_ClaveWeb.toString()
 
-    if (username === credentials.USER_CODE && password === credentials.USERID.toString()) {
+    const password_decrypt = decrypt(password1, "RL")
+    console.log("PASSWORD"+password_decrypt+"OTRA "+password);
+
+
+
+    if (username === credentials.USER_CODE && password === password_decrypt) {
 
       const token = 'your_generated_token'; // Reemplaza esto con un token real
-      res.json({USERID, token });
+      res.json({password1, token });
     } else {
       res.status(401).json({ error: 'Credenciales inválidas' });
     }
