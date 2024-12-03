@@ -11,7 +11,7 @@ const Login: React.FC<{ onLogin: (token: string, username: string) => void }> = 
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/login', {
+      const response = await fetch('http://192.168.1.130:3001/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ const Login: React.FC<{ onLogin: (token: string, username: string) => void }> = 
           />
         </div>
         {error && <p className="text-red-500 text-xs italic">{error}</p>}
-        <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+        <button type="submit" className="bg-blue-400 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
           Iniciar Sesión
         </button>
       </form>

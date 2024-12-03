@@ -24,7 +24,7 @@ const ItemSelectionModal: React.FC<ItemSelectionModalProps> = ({ isOpen, onClose
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:3001/api/items?search=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(`http://192.168.1.130:3001/api/items?search=${encodeURIComponent(searchTerm)}`);
       if (!response.ok) {
         throw new Error('Failed to fetch items');
       }

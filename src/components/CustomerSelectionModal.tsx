@@ -28,7 +28,7 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({ isOpen,
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:3001/api/customers');
+      const response = await fetch('http://192.168.1.130:3001/api/customers');
       if (!response.ok) {
         throw new Error('Failed to fetch customers');
       }

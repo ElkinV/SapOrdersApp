@@ -4,7 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import { encrypt, decrypt } from './encryptUtils.js';
-import { loginToServiceLayer, logoutToServiceLayer, agent, serviceLayerUrl } from './SapLogin.js';
+import { loginToServiceLayer, logoutToServiceLayer, agent, serviceLayerUrl } from './sapLogin.js';
 
 
 dotenv.config();
@@ -17,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 const connectionString = process.env.DB_CONNECTION_STRING;
+const encryptKey = process.env.KEY_AES;
 
 
 
@@ -159,7 +160,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+app.listen(port, process.env.HOST,() => {
   console.log(`Server running on port ${port}`);
   console.log('Database connection string:', connectionString);
 });
@@ -295,7 +296,7 @@ app.post('/api/login', async (req, res) => {
     let credentials = result[0]
     let password1 = credentials.U_RL_ClaveWeb.toString()
 
-    const password_decrypt = decrypt(password1, "RL")
+    const password_decrypt = decrypt(password1, encryptKey)
     console.log("PASSWORD"+password_decrypt+"OTRA "+password);
 
 
@@ -344,6 +345,60 @@ app.get('/api/get-userid', async (req, res) => {
     }
   } catch (error) {
     console.error('Error in /api/get-userid:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+        console.log('Database connection closed');
+      } catch (closeError) {
+        console.error('Error closing database connection:', closeError);
+      }
+    }
+  }
+});
+
+app.post('/api/change-password', async (req, res) => {
+  const { username, oldPassword, newPassword } = req.body;
+  let connection;
+
+  try {
+    console.log('Attempting to connect to database...');
+    connection = await odbc.connect(connectionString);
+    console.log('Connected to database successfully');
+
+    await connection.query('SET SCHEMA RYLPHARMA');
+
+    // Obtener la clave cifrada de la base de datos
+    const query = 'SELECT "U_RL_ClaveWeb" FROM "OUSR" WHERE "USER_CODE" = ?';
+    const result = await connection.query(query, [username]);
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const encryptedPassword = result[0].U_RL_ClaveWeb;
+    const decryptedPassword = decrypt(encryptedPassword, encryptKey); // Desencriptar la clave
+
+    // Comparar la clave anterior con la clave desencriptada
+    if (oldPassword !== decryptedPassword) {
+      return res.status(401).json({ error: 'Old password is incorrect' });
+    }
+
+    // Comparar la nueva clave con la confirmación
+    if (newPassword !== req.body.confirmPassword) {
+      return res.status(400).json({ error: 'New password and confirmation do not match' });
+    }
+
+    // Cifrar la nueva clave
+    const newEncryptedPassword = encrypt(newPassword, encryptKey);
+
+    // Actualizar la clave en la base de datos
+    await connection.query('UPDATE "OUSR" SET "U_RL_ClaveWeb" = ? WHERE "USER_CODE" = ?', [newEncryptedPassword, username]);
+
+    res.status(200).json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Error changing password:', error);
     res.status(500).json({ error: 'Internal Server Error', details: error.message });
   } finally {
     if (connection) {

@@ -31,7 +31,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
 
     let userId: string | null = null;
     try {
-        const userResponse = await fetch(`http://localhost:3001/api/get-userid?username=${username}`);
+        const userResponse = await fetch(`http://192.168.1.130:3001/api/get-userid?username=${username}`);
         if (!userResponse.ok) {
             throw new Error('Failed to fetch USERID');
         }
@@ -108,7 +108,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
   const handleSelectItem = async (selectedItem: Item) => {
     if (currentEditIndex !== null && priceList !== null) {
       try {
-        const response = await fetch(`http://localhost:3001/api/item-price?itemCode=${selectedItem.id}&priceList=${priceList}`);
+        const response = await fetch(`http://192.168.1.130:3001/api/item-price?itemCode=${selectedItem.id}&priceList=${priceList}`);
         if (!response.ok) {
           throw new Error('Failed to fetch item price');
         }
@@ -258,7 +258,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
         </div>
         <button
           type="submit"
-          className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
+          className="w-full px-4 py-2 bg-blue-400 text-white rounded-md hover:bg-blue-500 disabled:bg-blue-300"
           disabled={isSubmitting}
         >
           {isSubmitting ? 'Creating Order...' : 'Crear Orden de venta'}

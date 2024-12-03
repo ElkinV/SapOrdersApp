@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import Login from './components/Login';
 import { Package, List } from 'lucide-react';
 import Header from './components/Header';
@@ -45,7 +44,7 @@ function App() {
           <div className="flex border-b">
             <button
               className={`flex-1 py-4 px-6 text-center ${
-                activeTab === 'create' ? 'bg-blue-500 text-white' : 'bg-gray-100'
+                activeTab === 'create' ? 'bg-blue-400 text-white' : 'bg-gray-100'
               }`}
               onClick={() => setActiveTab('create')}
               disabled={!token}
@@ -55,7 +54,7 @@ function App() {
             </button>
             <button
               className={`flex-1 py-4 px-6 text-center ${
-                activeTab === 'view' ? 'bg-blue-500 text-white' : 'bg-gray-100'
+                activeTab === 'view' ? 'bg-blue-400 text-white' : 'bg-gray-100'
               }`}
               onClick={() => setActiveTab('view')}
               disabled={!token}

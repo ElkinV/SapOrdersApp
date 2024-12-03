@@ -13,7 +13,7 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ userId }) => {
       if (!userId) return;
 
       try {
-        const response = await fetch(`http://localhost:3001/api/orderslist?userId=${userId}`);
+        const response = await fetch(`http://192.168.1:3001/api/orderslist?userId=${userId}`);
         const data = await response.json();
         setSalesOrders(data);
       } catch (error) {
