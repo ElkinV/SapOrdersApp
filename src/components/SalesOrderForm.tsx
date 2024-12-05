@@ -4,6 +4,7 @@ import ItemSelectionModal, { Item } from './ItemSelectionModal';
 import { Plus } from 'lucide-react';
 import CustomerSelectionModal, { Customer } from './CustomerSelectionModal';
 import { ToastContainer, toast } from 'react-toastify';
+import Loader from "./Loader"
 
 
 interface SalesOrderFormProps {
@@ -17,6 +18,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
   const [priceList, setPriceList] = useState<number | null>(null);
   const [items, setItems] = useState<SalesOrderItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [currentEditIndex, setCurrentEditIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +58,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
     };
 
     try {
-      const response = await fetch('http://localhost:3001/api/orders', {
+      const response = await fetch('http://192.168.1.130:3001/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +78,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
       onCreateSalesOrder(newOrder);
       setCustomerName('');
       setItems([]);
-      
+
       toast.success('Orden de venta creada exitosamente!');
     } catch (err) {
       console.error('Error creating order:', err);
@@ -100,9 +102,12 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
     setItems(newItems);
   };
 
-  const addItem = () => {
+  const addItem = async()=> {
+    setLoading(true);
     setCurrentEditIndex(items.length);
     setIsModalOpen(true);
+    setLoading(false);
+
   };
 
   const handleSelectItem = async (selectedItem: Item) => {
@@ -135,6 +140,16 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
     setPriceList(selectedCustomer.priceList);
   };
 
+  const handleDeleteItem = (index: number) => {
+    const updatedItems = items.filter((_, i) => i !== index);
+    setItems(updatedItems);
+  };
+
+  const handleEditItem = (index: number) => {
+    setCurrentEditIndex(index); // Establecer el índice para edición
+    setIsModalOpen(true); // Abrir el modal
+  };
+
 
   return (
     <>
@@ -145,12 +160,12 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
               Código del Cliente
             </label>
             <input
-              type="text"
-              id="cardCode"
-              value={cardCode}
-              className="mt-1 block w-full rounded-md bg-gray-50 border-gray-800 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              readOnly
-              required
+                type="text"
+                id="cardCode"
+                value={cardCode}
+                className="mt-1 block w-full rounded-md bg-gray-50 border-gray-800 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                readOnly
+                required
             />
           </div>
           <div className="flex-1">
@@ -158,90 +173,114 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
               Nombre del Cliente
             </label>
             <input
-              type="text"
-              id="customerName"
-              value={customerName}
-              className="mt-1 block w-full rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              readOnly
-              required
+                type="text"
+                id="customerName"
+                value={customerName}
+                className="mt-1 block w-full rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                readOnly
+                required
             />
           </div>
           <button
-            type="button"
-            onClick={() => setIsCustomerModalOpen(true)}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              type="button"
+              onClick={() => setIsCustomerModalOpen(true)}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
           >
             Seleccionar Cliente
           </button>
         </div>
+        {loading && <Loader/>}
         <span className="flex items-center">
           <span className="h-px flex-1 bg-gray-300"></span>
           <span className="block text-sm font-medium text-gray-700 shrink-0 px-6 ">Articulos</span>
           <span className="h-px flex-1 bg-gray-300"></span>
         </span>
-        {items.map((item, index) => (
-          <div key={index} className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                value={item.itemCode ?? ''}
-                onChange={(e) => handleItemChange(index, 'itemCode', e.target.value)}
-                className="block w-1/2 rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                readOnly
-                required
-              />
-              <input
-                type="text"
-                value={item.name ?? ''}
-                onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                className="block w-1/2 rounded-md border-black shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 "
-                readOnly
-                required
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentEditIndex(index);
-                  setIsModalOpen(true);
-                }}
-                className="px-2 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-              >
-                Editar
-              </button>
-            </div>
-            <div className="flex space-x-2">
-              <input
-                type="number"
-                placeholder="Cantidad"
-                value={item.quantity ?? 1}
-                onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                min="1"
-                className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Precio"
-                value={item.unitPrice}
-                onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                min="0"
-                step="0.01"
-                className="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                required
-                readOnly
-              />
-            </div>
-          </div>
-        ))}
         <button
-          type="button"
-          onClick={addItem}
-          className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
+            type="button"
+            onClick={addItem}
+            className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
         >
           <Plus size={18} className="mr-2"/>
           Añadir Articulo
         </button>
+        <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
+          <thead>
+          <tr>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Número de Artículo</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Descripción</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Cantidad</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Precio Unitario</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Total</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Acciones</th>
+          </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+          {items.map((item, index) => (
+              <tr key={index}>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-900">
+                  <input
+                      type="text"
+                      placeholder="Número de artículo"
+                      value={item.itemCode ?? ''}
+                      onChange={(e) => handleItemChange(index, 'itemCode', e.target.value)}
+                      className="w-full bg-transparent border border-gray-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:outline-none"
+                  />
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <input
+                      type="text"
+                      value={item.name ?? ''}
+                      placeholder="Descripción"
+                      onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                      className="w-full bg-transparent border border-gray-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:outline-none"
+                      readOnly
+                  />
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <input
+                      type="number"
+                      value={item.quantity ?? 1}
+                      placeholder="Cantidad"
+                      onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                      min="1"
+                      className="w-full bg-transparent border border-gray-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:outline-none"
+                  />
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <input
+                      type="number"
+                      value={item.unitPrice ?? 0}
+                      placeholder="Precio Unitario"
+                      onChange={(e) => handleItemChange(index, 'unitPrice', parseFloat(e.target.value))}
+                      min="0"
+                      className="w-full bg-transparent border border-gray-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:outline-none"
+                      readOnly
+                  />
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  ${(item.quantity * item.unitPrice || 0).toFixed(2)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <button
+                      onClick={() => handleEditItem(index)}
+                      className="px-2 py-1 bg-yellow-300 text-yellow-800 rounded-md hover:bg-yellow-400"
+                  >
+                    Editar
+                  </button>
+                  <button
+                      onClick={() => handleDeleteItem(index)}
+                      className="ml-2 px-2 py-1 bg-red-300 text-red-800 rounded-md hover:bg-red-400"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+          ))}
+          </tbody>
+        </table>
+
         {error && <p className="text-red-500">{error}</p>}
+
         <span className="flex items-center">
           <span className="h-px flex-1 bg-gray-300"></span>
         </span>
@@ -250,31 +289,31 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
             Comentarios
           </label>
           <textarea
-            id="comments"
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
-            className="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              id="comments"
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              className="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
           />
         </div>
         <button
-          type="submit"
-          className="w-full px-4 py-2 bg-blue-400 text-white rounded-md hover:bg-blue-500 disabled:bg-blue-300"
-          disabled={isSubmitting}
+            type="submit"
+            className="w-full px-4 py-2 bg-blue-400 text-white rounded-md hover:bg-blue-500 disabled:bg-blue-300"
+            disabled={isSubmitting}
         >
           {isSubmitting ? 'Creating Order...' : 'Crear Orden de venta'}
         </button>
         <ItemSelectionModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSelectItem={handleSelectItem}
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSelectItem={handleSelectItem}
         />
         <CustomerSelectionModal
-          isOpen={isCustomerModalOpen}
-          onClose={() => setIsCustomerModalOpen(false)}
-          onSelectCustomer={handleSelectCustomer}
+            isOpen={isCustomerModalOpen}
+            onClose={() => setIsCustomerModalOpen(false)}
+            onSelectCustomer={handleSelectCustomer}
         />
       </form>
-      <ToastContainer />
+      <ToastContainer/>
     </>
   );
 };

@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ username, onChangePassword }) => {
   const handleChangePassword = async () => {
     console.log('Button clicked');
     try {
-      const response = await fetch('http://localhost:3001/api/change-password', {
+      const response = await fetch('http://192.168.1.130:3001/api/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -25,7 +25,7 @@ function App() {
     setActiveTab('create');
 
     try {
-      const response = await fetch(`http://localhost:3001/api/get-userid?username=${username}`);
+      const response = await fetch(`http://192.168.1.130:3001/api/get-userid?username=${username}`);
       const userData = await response.json();
       setUserId(userData.USERID);
     } catch (error) {

@@ -1,5 +1,6 @@
 import React, { useState, } from 'react';
 import { X, RefreshCw, Search } from 'lucide-react';
+import Loader from "./Loader"
 
 export interface Item {
   id: string;
@@ -66,7 +67,7 @@ const ItemSelectionModal: React.FC<ItemSelectionModalProps> = ({ isOpen, onClose
               Buscar
             </button>
           </div>
-          {loading && <p className="text-center">Cargando articulos...</p>}
+          {loading && <Loader/>}
           {error && (
               <div className="text-center">
                 <p className="text-red-500 mb-2">{error}</p>
