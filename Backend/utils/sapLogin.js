@@ -10,7 +10,6 @@ const serviceLayerPassword = process.env.SERVICE_LAYER_PASSWORD;
 export const agent = new https.Agent({rejectUnauthorized: false});
 
 
-
 export async function loginToServiceLayer() {
     try {
         const response = await axios.post(`${serviceLayerUrl}Login`, {

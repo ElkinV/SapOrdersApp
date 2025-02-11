@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
+import {setCookie} from '../../utils/cookieFunc.ts'
+
+const host = "152.200.153.166";
+
+
 
 const Login: React.FC<{ onLogin: (token: string, username: string) => void }> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
@@ -11,12 +16,13 @@ const Login: React.FC<{ onLogin: (token: string, username: string) => void }> = 
     setError(null);
 
     try {
-      const response = await fetch('http://192.168.1.130:3001/api/login', {
+
+      const response = await fetch(`http://${host}:3001/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password}),
       });
 
       if (!response.ok) {
@@ -24,10 +30,14 @@ const Login: React.FC<{ onLogin: (token: string, username: string) => void }> = 
       }
 
       const data = await response.json();
+      setCookie("token", data.token,30);
       onLogin(data.token, username);
     } catch (error) {
-      console.error(error);
-      toast.error(`Error al iniciar sesión: ${error.message}`);
+      if( typeof error === "object" && error && "message" in error && typeof error.message === "string"){
+        console.error(error);
+        toast.error(`Error al iniciar sesión: ${error.message}`);
+      }
+
     }
   };
 

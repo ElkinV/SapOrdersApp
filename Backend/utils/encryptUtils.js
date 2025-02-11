@@ -9,7 +9,7 @@ export function deriveKeyFromText(textKey) {
 }
 
 // Función para cifrar con clave de texto
-export function encrypt(text, textKey) {
+export  function encrypt(text, textKey) {
     const keyBuffer = deriveKeyFromText(textKey);
     const iv = crypto.randomBytes(16); // Generar un IV aleatorio para cada cifrado
     const cipher = crypto.createCipheriv(algorithm, keyBuffer, iv);
@@ -19,7 +19,7 @@ export function encrypt(text, textKey) {
 }
 
 // Función para descifrar con clave de texto
-export function decrypt(encryptedText, textKey) {
+export  function decrypt(encryptedText, textKey) {
     const keyBuffer = deriveKeyFromText(textKey);
     const [ivHex, encrypted] = encryptedText.split(':');
     const decipher = crypto.createDecipheriv(algorithm, keyBuffer, Buffer.from(ivHex, 'hex'));
@@ -27,3 +27,4 @@ export function decrypt(encryptedText, textKey) {
     decrypted += decipher.final('utf8');
     return decrypted;
 }
+
