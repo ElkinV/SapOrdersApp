@@ -11,13 +11,14 @@ const secret = process.env.JWT_KEY;
 
 customerRouter.get('/list', expressjwt ({ secret, algorithms: ['HS256'] }),async (req, res) => {
     try {
-        const result= await sapQuery(connectionString, schema,'SELECT  "CardCode", "CardName", "CardType", "ListNum" FROM "OCRD" WHERE "CardType"=\'C\' ORDER BY "CardName"' );
+        const result= await sapQuery(connectionString, schema,'SELECT  OCRD ."CardCode", OCRD ."CardName", OCRD ."CardType", OCRD ."ListNum", replace(OPLN."ListName", \'Lista\', \'\'  )as "margen" FROM OCRD INNER JOIN OPLN  ON OCRD ."ListNum" = OPLN."ListNum" WHERE "CardType"=\'C\' ORDER BY "CardName"' );
         console.log(result);
 
         const items = result.map(item => ({
             id: item.CardCode,
             name: item.CardName,
-            priceList: item.ListNum
+            priceList: item.ListNum,
+            margen: item.margen.trimStart(),
         }));
 
         res.json(items);

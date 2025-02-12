@@ -46,11 +46,11 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onOptionSelect }) => {
 
     return (
         <div ref={dropdownRef} className="relative">
-            <div className="inline-flex items-center overflow-hidden rounded-md border bg-white">
+            <div className="mt-4 inline-flex items-center overflow-hidden rounded-md border bg-white">
                 <button
                     type="button"
                     onClick={() => setIsActive(!isActive)}
-                    className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700"
+                    className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700"
                 >
                     {selectedOption}
                 </button>

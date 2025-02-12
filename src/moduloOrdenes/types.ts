@@ -15,6 +15,7 @@ export interface Customer {
   id: string;
   name: string;
   priceList: number;
+  margen: string;
 }
 
 export interface Item {

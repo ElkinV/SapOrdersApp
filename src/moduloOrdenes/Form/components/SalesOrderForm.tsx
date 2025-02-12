@@ -8,7 +8,7 @@ import Loader from "../../components/Loader.tsx"
 import ItemSelectionModal from "./ItemSelectionModal.tsx";
 import LoadItemModal from "../../components/loadItemsModal.tsx";
 
-const host = "152.200.153.166";
+const host = "192.168.1.109";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface SalesOrderFormProps {
@@ -19,6 +19,7 @@ interface SalesOrderFormProps {
 const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, username}) => {
   const [customerName, setCustomerName] = useState('');
   const [cardCode, setCardCode] = useState('');
+  const [margen, setMargen] = useState('');
   const [priceList, setPriceList] = useState<number | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -240,6 +241,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
     setCardCode(selectedCustomer.id);
     setCustomerName(selectedCustomer.name);
     setPriceList(selectedCustomer.priceList);
+    setMargen(selectedCustomer.margen);
 
     // Si la lista de precios no es válida, salimos
     if (selectedCustomer.priceList === null) return;
@@ -331,10 +333,23 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
               required
           />
         </div>
+        <div className="flex-2">
+          <label htmlFor="margen" className="block text-sm font-medium text-gray-700">
+            Margen
+          </label>
+          <input
+              type="text"
+              id="margen"
+              value={margen}
+              className="mt-1 block w-full rounded-md bg-gray-50 border-gray-800 shadow-sm text-center focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              readOnly
+              required
+          />
+        </div>
         <button
             type="button"
             onClick={() => setIsCustomerModalOpen(true)}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+            className="mt-4 px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
         >
           Seleccionar Cliente
         </button>
@@ -346,7 +361,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
       <span className="block text-sm font-medium text-gray-700 shrink-0 px-6 ">Articulos</span>
       <span className="h-px flex-1 bg-gray-300"></span>
     </span>
-      <div className="flex items-center space-x-4" >
+      <div className="flex items-center space-x-4">
         <div className="">
           <button
               type="button"
@@ -386,6 +401,9 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Precio Unitario
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total
+              </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Acciones
               </th>
@@ -393,7 +411,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
             {items.map((item, index) => <tr key={index}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.itemCode}</td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.itemCode}</td>
               <td
                   className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
                   title={item.name} // Aquí se usa el atributo title

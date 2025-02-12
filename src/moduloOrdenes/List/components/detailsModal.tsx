@@ -3,7 +3,7 @@ import { X, Download } from "lucide-react";
 import {OrderDetails} from "../../types.ts";
 import {generatePDF} from "../pdfGeneratorButton.ts";
 
-const API_HOST = "152.200.153.166";
+const API_HOST = "192.168.1.109";
 
 interface DetailsModalProps {
     isOpen: boolean;
@@ -153,7 +153,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
                                         ${item.price?.toFixed(2) || "0.00"}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-900 text-right">
-                                        {item.margen ? `${item.margen}%` : "0%"}
+                                        {item.margen}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-900 text-right">
                                         ${item.total?.toFixed(2) || "0.00"}
