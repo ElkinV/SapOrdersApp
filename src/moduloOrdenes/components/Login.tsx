@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import {setCookie} from '../../utils/cookieFunc.ts'
 
-const host = "152.200.153.166";
+const host = "192.168.1.157";
 
 
 

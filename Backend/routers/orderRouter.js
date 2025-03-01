@@ -43,7 +43,8 @@ orderRouter.post('/', expressjwt ({ secret, algorithms: ['HS256'] }),async (req,
                 Quantity: item.quantity,
                 UnitPrice: item.unitPrice,
                 COGSCostingCode: "2",
-                CostingCode2: "2.1"
+                CostingCode2: "2.1",
+                U_RL_Margen: item.U_RL_Margen,
             }))
         };
 
@@ -85,12 +86,13 @@ orderRouter.get('/list',expressjwt ({ secret, algorithms: ['HS256'] }), async (r
     const { userId } = req.query; // Capturamos el USERID del query string
 
     try {
-        const result = await sapQuery(connectionString, schema,'SELECT top 20 "CardCode", "CardName" AS "CustomerName" , "DocDate", "DocNum" FROM "ORDR" WHERE "U_RL_Origen"=\'WEBAPP\'  and "U_RL_Usuario"=' + `\'${userId}\'`+'ORDER BY "DocDate" desc ' )
+        const result = await sapQuery(connectionString, schema,`SELECT top 20 "CardCode", "CardName" AS "CustomerName" , "DocDate", "DocNum", CASE WHEN "DocStatus" = \'C\' THEN \'Cerrado\' WHEN "DocStatus"= \'O\' THEN \'Abierto\' ELSE \'N/A\' END as Status FROM "ORDR" WHERE "U_RL_Origen" =\'WEBAPP\' and  "U_RL_Usuario" = \'${userId}\' ORDER BY "DocDate" desc` )
         const orders = result.map(item => ({
             cardCode: item.CardCode,
             customerName: item.CustomerName,
             date: item.DocDate,
             docNum: item.DocNum,
+            docStatus: item.STATUS
         }));
 
         res.json(orders);
@@ -102,8 +104,7 @@ orderRouter.get('/list',expressjwt ({ secret, algorithms: ['HS256'] }), async (r
 
 orderRouter.get('/details',expressjwt ({ secret, algorithms: ['HS256'] }), async (req, res) => {
     const {orderId} = req.query;
-    const query = `SELECT PaymentInfo."PymntGroup", OCRD."U_RL_DIASCOTIZA" "VigenciaOrdr", RDR1."ItemCode",RDR1."VatPrcnt", ORDR."Comments",OITM."U_RL_Cod_Cum" "Cum", TO_DATE(OITM."U_RL_FV_Inv") "FV",OITM."U_RL_Reg_Inv" "Invima", TO_DATE(ORDR."DocDate") "DocDate", RDR1."Dscription", RDR1."Quantity", replace(OPLN."ListName", 'Lista', ''  )as "margen", RDR1."U_RL_Vence", RDR1."U_RL_VenceMes", ORDR."DocNum", ORDR."U_RL_Origen", OCRD."U_HBT_MailRecep_FE", ORDR."CardName", ORDR."LicTradNum", OCRD."City", OCRD."Address", OCRD."E_Mail" email, OCRD."Phone1", OSLP."SlpName", CASE WHEN ORDR."Series" = 13 THEN 'PediClie' WHEN ORDR."Series" = 83 THEN 'Cotiza' ELSE 'NA' END AS "Series", ITM1."Price" AS "Precio", ORDR."VatSum", ORDR."DocTotal", (ORDR."DocTotal" - ORDR."VatSum") AS "TotalAntesDeImpuestos", (SELECT top 1 "U_NAME" from OUSR a INNER JOIN ORDR b ON b."U_RL_Usuario" = a."USERID") as "NombreUsuario" FROM RDR1 INNER JOIN ORDR ON ORDR."DocEntry" = RDR1."DocEntry" INNER JOIN OCRD ON OCRD."CardCode" = ORDR."CardCode" AND OCRD."CardType" = 'C' INNER JOIN ITM1 ON ITM1."ItemCode" = RDR1."ItemCode" AND ITM1."PriceList" = OCRD."ListNum" INNER JOIN OSLP ON OSLP."SlpCode" = RDR1."SlpCode" INNER JOIN OITM  on OITM."ItemCode" = RDR1."ItemCode" INNER JOIN OPLN  ON OCRD."ListNum" = OPLN."ListNum" LEFT JOIN(SELECT ORDR."DocNum", OCTG."PymntGroup" from OCTG INNER JOIN ORDR ON ORDR."GroupNum" = OCTG."GroupNum") as PaymentInfo ON PaymentInfo."DocNum" = ORDR."DocNum" WHERE ORDR."DocNum" = ${orderId}`;
-
+    const query = `SELECT ORDR."CardCode",PaymentInfo."PymntGroup", OCRD."U_RL_DIASCOTIZA" AS "VigenciaOrdr", RDR1."ItemCode", RDR1."VatPrcnt", ORDR."Comments", OITM."U_RL_Cod_Cum" AS "Cum", OITM."U_RL_Reg_Inv" AS "Invima", TO_DATE(ORDR."DocDate") AS "DocDate", RDR1."Dscription", RDR1."Quantity", RDR1."U_RL_Margen", ExpData."U_RL_Vence", ExpData."U_RL_VenceMes", ORDR."DocNum", ORDR."U_RL_Origen", OCRD."U_HBT_MailRecep_FE", ORDR."CardName", ORDR."LicTradNum", OCRD."City", OCRD."Address", OCRD."E_Mail" AS email, OCRD."Phone1", OSLP."SlpName", CASE WHEN ORDR."Series" = 13 THEN 'PediClie' WHEN ORDR."Series" = 83 THEN 'Cotiza' ELSE 'NA' END AS "Series", ITM1."Price" AS "Precio", ORDR."VatSum", ORDR."DocTotal", (ORDR."DocTotal" - ORDR."VatSum") AS "TotalAntesDeImpuestos", UserData."NombreUsuario" FROM RDR1 INNER JOIN ORDR ON ORDR."DocEntry" = RDR1."DocEntry" INNER JOIN OCRD ON OCRD."CardCode" = ORDR."CardCode" AND OCRD."CardType" = 'C' INNER JOIN ITM1 ON ITM1."ItemCode" = RDR1."ItemCode" AND ITM1."PriceList" = OCRD."ListNum" INNER JOIN OSLP ON OSLP."SlpCode" = RDR1."SlpCode" INNER JOIN OITM ON OITM."ItemCode" = RDR1."ItemCode" LEFT JOIN ( SELECT "ItemCode", CAST(MIN("ExpDate") AS DATE) AS "U_RL_Vence", TO_VARCHAR(MONTHS_BETWEEN(CURRENT_DATE, MIN("ExpDate"))) || ' MESES' AS "U_RL_VenceMes" FROM OIBT WHERE "Quantity" > 0 AND "ExpDate" > CURRENT_DATE AND "WhsCode" = '001' GROUP BY "ItemCode") ExpData ON ExpData."ItemCode" = RDR1."ItemCode" LEFT JOIN ( SELECT ORDR."DocNum", OCTG."PymntGroup" FROM OCTG INNER JOIN ORDR ON ORDR."GroupNum" = OCTG."GroupNum") PaymentInfo ON PaymentInfo."DocNum" = ORDR."DocNum" LEFT JOIN (SELECT DISTINCT "USERID", "U_NAME" AS "NombreUsuario"FROM OUSR) UserData ON UserData."USERID" = ORDR."U_RL_Usuario" WHERE ORDR."DocNum" = ${orderId}`;
 
     try {
         const result = await sapQuery(connectionString, schema, query )
@@ -114,7 +115,7 @@ orderRouter.get('/details',expressjwt ({ secret, algorithms: ['HS256'] }), async
             description: item.Dscription,
             quantity: item.Quantity,
             price: item.Precio,
-            margen: item.margen,
+            margen: item.U_RL_Margen,
             total: parseInt(item.Quantity) * (item.Precio),
             vence: item.U_RL_Vence,
             venceMes: item.U_RL_VenceMes,
@@ -133,7 +134,6 @@ orderRouter.get('/details',expressjwt ({ secret, algorithms: ['HS256'] }), async
             docNum: item.DocNum,
             docDate: item.DocDate,
             cum: item.Cum,
-            fechaVence: item.FV,
             regInvima: item.Invima,
             IVA: item.VatPrcnt,
             formaDePago: item.PymntGroup,
@@ -148,3 +148,5 @@ orderRouter.get('/details',expressjwt ({ secret, algorithms: ['HS256'] }), async
 
 })
 export default orderRouter;
+
+

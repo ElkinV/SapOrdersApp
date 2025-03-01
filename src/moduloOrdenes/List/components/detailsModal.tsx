@@ -3,7 +3,7 @@ import { X, Download } from "lucide-react";
 import {OrderDetails} from "../../types.ts";
 import {generatePDF} from "../pdfGeneratorButton.ts";
 
-const API_HOST = "192.168.1.109";
+const API_HOST = "192.168.1.157";
 
 interface DetailsModalProps {
     isOpen: boolean;

@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {RefreshCw, X} from 'lucide-react';
 import {Customer} from "../../types.ts";
 
-const host = "192.168.1.109";
+const host = "192.168.1.157";
 
 interface CustomerSelectionModalProps {
   isOpen: boolean;

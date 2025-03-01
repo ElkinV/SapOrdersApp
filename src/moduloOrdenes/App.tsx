@@ -9,7 +9,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DetailsModal from './List/components/detailsModal.tsx';
 
-const host = '152.200.153.166';
+const host = '192.168.1.157';
 
 function App() {
   const [userId, setUserId] = useState<string | null>(null);

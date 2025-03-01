@@ -9,6 +9,7 @@ export interface SalesOrder {
   user: string;
   docNum?: number;
   series: number;
+  docStatus: string;
 }
 
 export interface Customer {
@@ -51,7 +52,6 @@ export interface OrderDetails {
   docNum: number;
   docDate: string;
   cum: string;
-  fechaVence: string;
   regInvima: string;
   IVA: number;
   formaDePago:string;

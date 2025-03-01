@@ -134,7 +134,7 @@ export const generatePDF = (details: OrderDetails[] | null, orderId?: number): v
         item.IVA,
         "0,00",
         item.total.toLocaleString("es-CO", { minimumFractionDigits: 2 }),
-        item.fechaVence || "N/A",
+        item.vence || "N/A",
         item.regInvima||"" ,
         item.cum
     ]);

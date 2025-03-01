@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { SalesOrder } from '../../types.ts';
 
-const host = "192.168.1.109";
+const host = "192.168.1.157";
 
 interface SalesOrderListProps {
   userId: string | null;
@@ -41,22 +41,27 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ userId, onSelectCardCod
             salesOrders.map((order) => (
                 <div
                     key={order.cardCode}
-                    className="bg-white shadow-md rounded-lg p-4 mb-4 cursor-pointer hover:bg-gray-100"
-                    onClick={() => onSelectCardCode(order.docNum)} // Llama al callback con el cardCode seleccionado
+                    className={`shadow-md rounded-lg p-4 mb-4 cursor-pointer hover:bg-blue-100 ${
+                        order.docStatus === "Cerrado" ? "bg-gray-100" : "bg-green-50"
+                    }`}
+                    onClick={() => onSelectCardCode(order.docNum)}
                 >
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-lg font-semibold">{order.customerName}</h3>
                     <span className="text-sm text-gray-500">
-            {new Date(order.date).toLocaleDateString()}
-          </span>
+              {new Date(order.date).toLocaleDateString()}
+            </span>
                   </div>
                   <p className="text-sm">Número de Orden: {order.docNum}</p>
                   <p className="text-sm">Código de Cliente: {order.cardCode}</p>
+                  <p className="text-sm">Estado: {order.docStatus} </p>
                 </div>
             ))
         )}
       </div>
   );
+
 };
 
 export default SalesOrderList;
+

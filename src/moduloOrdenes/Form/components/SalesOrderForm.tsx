@@ -8,7 +8,7 @@ import Loader from "../../components/Loader.tsx"
 import ItemSelectionModal from "./ItemSelectionModal.tsx";
 import LoadItemModal from "../../components/loadItemsModal.tsx";
 
-const host = "192.168.1.109";
+const host = "192.168.1.157";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface SalesOrderFormProps {
@@ -70,7 +70,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
       customerName: customerName,
       cardCode: cardCode,
       date: new Date().toISOString(),
-      items ,
+      items: items,
       total: items.reduce((sum, item) => sum + item.quantity * (item.unitPrice || 0), 0),
       comments: comments,
       user: userId,
@@ -151,11 +151,14 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
           throw new Error('Failed to fetch item price');
         }
         const priceData = await response.json();
+        const margenDecimal = parseFloat(parseFloat(margen).toFixed())
+        console.log(typeof margenDecimal, margenDecimal);
         const updatedItem = {
           name: selectedItem.name,
           itemCode: selectedItem.itemCode,
           quantity: selectedItem.quantity || 1,
           unitPrice: priceData.price,
+          U_RL_Margen: margenDecimal
         };
 
         setItems((prevItems) => {

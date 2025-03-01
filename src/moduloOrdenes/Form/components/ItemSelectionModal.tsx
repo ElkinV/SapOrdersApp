@@ -3,7 +3,7 @@ import { X, RefreshCw, Search } from 'lucide-react';
 import Loader from "../../components/Loader.tsx"
 import {Item} from "../../types.ts"
 
-const host ="152.200.153.166";
+const host ="192.168.1.157";
 
 interface ItemSelectionModalProps {
   isOpen: boolean;
