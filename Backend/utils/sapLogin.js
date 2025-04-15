@@ -36,7 +36,7 @@ export async function logoutToServiceLayer(token) {
         const headers = { "Cookie": "B1SESSION=" + token + "; ROUTEID=.node4" };
         const response = await axios.post(url, {}, { headers: headers, httpsAgent: agent });
         //serviceLayerSession = null;
-        console.log('Logged out from Service Layer successfully:', response);
+        console.log('Logged out from Service Layer successfully');
     } catch (error) {
         console.log(serviceLayerUsername);
         console.error('Error logging out from Service Layer:', error.message);

@@ -2,6 +2,7 @@ import express from "express";
 import {expressjwt} from "express-jwt";
 import sapQuery from "../utils/odbcSap.js";
 
+
 let itemRouter = express.Router();
 const connectionString = process.env.DB_CONNECTION_STRING;
 const schema = process.env.SAP_COMPANY_DB;
@@ -21,6 +22,7 @@ itemRouter.get('/', expressjwt ({ secret, algorithms: ['HS256'] }),async (req, r
         const items = result.map(item => ({
             itemCode: item.ItemCode,
             name: item.ItemName,
+            WarehouseCode:'001'
         }));
 
         res.json(items);
@@ -29,6 +31,26 @@ itemRouter.get('/', expressjwt ({ secret, algorithms: ['HS256'] }),async (req, r
         res.status(500).json({ error: 'Internal Server Error', details: error.message });
     }
 });
+
+itemRouter.get("/margen", async(req, res) => {
+    const {ItemCode, ItemPrice} = req.query;
+    console.log(ItemCode, ItemPrice);
+
+    try {
+        const query = `SELECT ( ( ${ItemPrice} - (CASE COALESCE(B."WhsCode",'') WHEN '001' THEN (CASE COALESCE(P."Price",0) WHEN 0 THEN B."AvgPrice" ELSE P."Price" END) ELSE (CASE COALESCE(B."AvgPrice",0) WHEN 0 THEN P."Price" ELSE B."AvgPrice" END) END) ) / (CASE WHEN COALESCE(25000,0)=0 THEN 1 ELSE 25000 END)) * 100 "Margen" FROM ITM1 P LEFT JOIN OITW B  ON P."ItemCode" = B."ItemCode"  AND 001 = B."WhsCode" WHERE P."ItemCode"= ${ItemCode} AND P."PriceList"=1`
+        const result = await sapQuery(connectionString, schema,query )
+
+        const margen = result[0].Margen
+
+        res.json(result)
+
+        console.log(margen)
+
+    }catch(error) {
+        console.log(error);
+    }
+
+})
 
 itemRouter.get('/price',  expressjwt ({ secret, algorithms: ['HS256'] }), async (req, res) => {
     const { itemCode, priceList } = req.query; // Capturamos itemCode y priceList del query string

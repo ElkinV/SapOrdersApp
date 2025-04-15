@@ -8,8 +8,9 @@ export const generatePDF = (details: OrderDetails[] | null, orderId?: number): v
     const doc = new jsPDF('p', 'mm', 'letter');
     const currentDate = new Date().toLocaleString();
     let vigencia;
+    // eslint-disable-next-line prefer-const
     vigencia = vigencia? details[0].vigenciaOrdr* 24: 48;
-    let serie = details[0].series[0] == 'C'? "COTIZACION": "Pedido Cliente";
+    const serie = details[0].series[0] == 'C'? "COTIZACION": "Pedido Cliente";
 
 
 
@@ -201,7 +202,6 @@ export const generatePDF = (details: OrderDetails[] | null, orderId?: number): v
             },
         },
         didParseCell: function(data) {
-            const lastRows = [1,2, 3, 4]; // Índices de las últimas 3 filas
             if (data.column.index === 0) {
                 if (data.row.index === 1) { // Primera fila del grupo a combinar
                     data.cell.rowSpan = 4;

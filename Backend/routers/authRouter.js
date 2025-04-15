@@ -35,7 +35,7 @@ authRouter.post('/login',async (req, res) => {
             password: encryptedPassword,
         }
 
-        tokenjwt= jwt.sign(user , jwtKey , {algorithm: 'HS256', expiresIn: '1h'});
+        tokenjwt= jwt.sign(user , jwtKey , {algorithm: 'HS256', expiresIn: '48h'});
 
         if (username === credentials.Username && password === decryptedPassword) {
             res.json({encryptedPassword: encryptedPassword,token: tokenjwt });
@@ -72,7 +72,7 @@ authRouter.post('/change-password',expressjwt ({ secret, algorithms: ['HS256'] }
         }
 
         // Comparar la nueva clave con la confirmación
-        if (newPassword != req.body.confirmPassword) {
+        if (newPassword !== req.body.confirmPassword) {
             return res.status(400).json({ error: 'New password and confirmation do not match' });
         }
 
@@ -109,9 +109,22 @@ authRouter.get('/get-userid',expressjwt ({ secret, algorithms: ['HS256'] }) ,asy
 });
 
 authRouter.post('/signup', async (req, res) => {
-    const { username, password } = req.body;
+    const {password } = req.body;
 
     jwt.sign(password , jwtKey , (err,token) => {
+        if(err){
+            res.status(400).send({msg : 'Error'})
+        }
+        else {
+            res.send({msg:'success' , token: token})
+        }
+    })
+})
+
+authRouter.get('verify-token', async (req, res) => {
+    const {tokenToVerify} = req.body;
+
+    jwt.verify(tokenToVerify, jwtKey, (err,token) => {
         if(err){
             res.status(400).send({msg : 'Error'})
         }

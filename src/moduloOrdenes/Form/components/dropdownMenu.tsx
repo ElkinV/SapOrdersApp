@@ -1,20 +1,29 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 interface DropdownMenuProps {
-    onOptionSelect: (code: number) => void; // Callback para enviar el código asociado
+    onOptionSelect: (code: number) => void;
+    initialOption?: string;
+    label?: string;
 }
 
-const DropdownMenu: React.FC<DropdownMenuProps> = ({ onOptionSelect }) => {
+const DropdownMenu: React.FC<DropdownMenuProps> = ({
+                                                       onOptionSelect,
+                                                       initialOption = "Seleccionar tipo",
+                                                       label = "Tipo de documento"
+                                                   }) => {
     const [isActive, setIsActive] = useState(false);
-    const [selectedOption, setSelectedOption] = useState("Tipo");
+    const [selectedOption, setSelectedOption] = useState(initialOption);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
 
-    // Mapa de opciones con códigos asociados
     const optionsMap: { [key: string]: number } = {
-        PediClie: 13,
-        Cotiza: 83,
+        "Pedido Cliente": 13,
+        "Cotización": 83,
     };
 
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    // Visibilidad del estado: Añadir ARIA para lectores de pantalla
+    const dropdownId = "document-type-dropdown";
+    const labelId = "document-type-label";
 
     const handleClickOutside = (event: MouseEvent) => {
         if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -28,7 +37,37 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onOptionSelect }) => {
         }
     };
 
-    React.useEffect(() => {
+    const handleKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setIsActive(!isActive);
+        } else if (event.key === "ArrowDown" && isActive) {
+            event.preventDefault();
+            const menuButtons = document.querySelectorAll('[role="menuitem"]');
+            if (menuButtons.length > 0) {
+                (menuButtons[0] as HTMLElement).focus();
+            }
+        }
+    };
+
+    const handleOptionKeyDown = (event: React.KeyboardEvent, option: string) => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleOptionClick(option);
+        } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            const menuButtons = document.querySelectorAll('[role="menuitem"]');
+            const currentIndex = Array.from(menuButtons).indexOf(event.currentTarget);
+            const nextIndex = event.key === "ArrowDown"
+                ? (currentIndex + 1) % menuButtons.length
+                : (currentIndex - 1 + menuButtons.length) % menuButtons.length;
+            (menuButtons[nextIndex] as HTMLElement).focus();
+        } else if (event.key === "Tab" && !event.shiftKey && event.currentTarget === menuButtons[menuButtons.length - 1]) {
+            setIsActive(false);
+        }
+    };
+
+    useEffect(() => {
         document.addEventListener("mousedown", handleClickOutside);
         document.addEventListener("keydown", handleEscapeKey);
         return () => {
@@ -38,33 +77,43 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onOptionSelect }) => {
     }, []);
 
     const handleOptionClick = (option: string) => {
-        setSelectedOption(option); // Actualiza la opción seleccionada visualmente
-        const code = optionsMap[option]; // Obtiene el código asociado
-        onOptionSelect(code); // Envía el código al componente padre
-        setIsActive(false); // Cierra el menú
+        setSelectedOption(option);
+        const code = optionsMap[option];
+        onOptionSelect(code);
+        setIsActive(false);
+        buttonRef.current?.focus(); // Devolver el foco al botón principal
     };
 
     return (
-        <div ref={dropdownRef} className="relative">
-            <div className="mt-4 inline-flex items-center overflow-hidden rounded-md border bg-white">
+        <div ref={dropdownRef} className="relative w-48">
+            {/* Añadir etiqueta visible para claridad */}
+            <label id={labelId} className="block text-sm font-medium text-gray-700 mb-1">
+                {label}
+            </label>
+            <div
+                className={`inline-flex items-center overflow-hidden rounded-md border bg-white shadow-sm w-full ${
+                    isActive ? "ring-2 ring-blue-300" : ""
+                }`}
+                aria-expanded={isActive}
+                aria-haspopup="listbox"
+                aria-labelledby={labelId}
+            >
                 <button
+                    ref={buttonRef}
                     type="button"
+                    id={dropdownId}
                     onClick={() => setIsActive(!isActive)}
-                    className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700"
+                    onKeyDown={handleKeyDown}
+                    className="flex-1 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left flex items-center justify-between"
+                    aria-controls={isActive ? "dropdown-menu" : undefined}
                 >
-                    {selectedOption}
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setIsActive(!isActive)}
-                    className="h-full p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-700"
-                >
-                    <span className="sr-only">Menu</span>
+                    <span>{selectedOption}</span>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="size-4"
+                        className={`w-4 h-4 ml-2 transition-transform ${isActive ? "rotate-180" : ""}`}
                         viewBox="0 0 20 20"
                         fill="currentColor"
+                        aria-hidden="true"
                     >
                         <path
                             fillRule="evenodd"
@@ -77,26 +126,42 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onOptionSelect }) => {
 
             {isActive && (
                 <div
-                    className="absolute end-0 z-10 mt-2 w-56 rounded-md border border-gray-100 bg-white shadow-lg"
-                    role="menu"
+                    id="dropdown-menu"
+                    className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg animate-in fade-in"
+                    role="listbox"
+                    aria-labelledby={dropdownId}
                 >
-                    <div className="p-2">
-                        <button
-                            type="button"
-                            onClick={() => handleOptionClick("PediClie")}
-                            className="block w-full text-left rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                            role="menuitem"
-                        >
-                            PediClie
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleOptionClick("Cotiza")}
-                            className="block w-full text-left rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                            role="menuitem"
-                        >
-                            Cotiza
-                        </button>
+                    <div className="p-1">
+                        {Object.keys(optionsMap).map((option) => (
+                            <button
+                                key={option}
+                                type="button"
+                                onClick={() => handleOptionClick(option)}
+                                onKeyDown={(e) => handleOptionKeyDown(e, option)}
+                                className={`flex w-full items-center justify-between rounded-lg px-4 py-2 text-sm ${
+                                    selectedOption === option
+                                        ? "bg-blue-100 text-blue-700 font-medium"
+                                        : "text-gray-700 hover:bg-gray-50"
+                                }`}
+                                role="menuitem"
+                                aria-selected={selectedOption === option}
+                                tabIndex={isActive ? 0 : -1}
+                            >
+                                {option}
+                                {selectedOption === option && (
+                                    <svg
+                                        className="w-4 h-4 text-blue-600"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        aria-hidden="true"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                )}
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}

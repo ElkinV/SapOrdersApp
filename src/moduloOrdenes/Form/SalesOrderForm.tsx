@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import {Customer, SalesOrder, Item} from '../../types.ts';
+import {Customer, SalesOrder, Item} from '../types.ts';
 import { Plus } from 'lucide-react';
-import CustomerSelectionModal from './CustomerSelectionModal.tsx';
-import DropdownMenu from './dropdownMenu.tsx';
-import { ToastContainer, toast } from 'react-toastify';
-import Loader from "../../components/Loader.tsx"
-import ItemSelectionModal from "./ItemSelectionModal.tsx";
-import LoadItemModal from "../../components/loadItemsModal.tsx";
+import CustomerSelectionModal from './components/CustomerSelectionModal.tsx';
+import DropdownMenu from './components/dropdownMenu.tsx';
+import { toast} from 'react-toastify';
+import Loader from "../components/Loader.tsx"
+import ItemSelectionModal from "./components/ItemSelectionModal.tsx";
+import LoadItemModal from "../components/loadItemsModal.tsx";
+import {host, getToken} from "../../utils/utils.ts";
+import {ItemsTable} from "./components/Tableitems.tsx";
 
-const host = "192.168.1.157";
+
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface SalesOrderFormProps {
@@ -33,6 +35,8 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
   const [tableData, setTableData] = useState<string[]>(Array(3).fill(""));
 
+
+
   const handleOptionSelect = (option: number) => {
     setSelectedMenuOption(option); // Actualiza la opción seleccionada
     console.log("Opción seleccionada:", option); // Lógica adicional para usar la opción
@@ -45,7 +49,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
 
     let userId: string | 'Usuario'= 'Usuario';
     try {
-      const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+      const token = getToken()
       const userResponse = await fetch(`http://${host}:3001/api/auth/get-userid?username=${username}`,{
         headers: {
           'Authorization': `Bearer ${token}`
@@ -60,7 +64,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
       if( typeof err === "object" && err && "message" in err && typeof err.message === "string"){
         console.error('Error fetching USERID:', err);
         setError(err.message);
-        toast.error(`Error al obtener el USERID: ${err.message}`);
+        toast.error(`Error al obtener el USERID`);
         setIsSubmitting(false);
         return;
       }
@@ -78,7 +82,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
     };
 
     try {
-      const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+      const token = getToken()
       const response = await fetch(`http://${host}:3001/api/orders/`, {
         method: 'POST',
         headers: {
@@ -95,18 +99,19 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
       }
 
       const result = await response.json();
-      console.log('Order created successfully:', result);
+      toast.success(`Orden de venta creada correctamente`);
 
       onCreateSalesOrder(newOrder);
       setCustomerName('');
+      setMargen('');
+      setCardCode('');
       setItems([]);
 
-      toast.success('Orden de venta creada exitosamente!');
     } catch (err) {
       if( typeof err === "object" && err && "message" in err && typeof err.message === "string"){
         console.error('Error creating order:', err);
         setError(err.message);
-        toast.error(`Error al crear la orden: ${err.message}`);
+        toast.error(`Error al crear la orden`);
       }
 
     } finally {
@@ -141,7 +146,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
   const handleSelectItem = async (selectedItem: Item) => {
     if (priceList !== null) {
       try {
-        const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+        const token = getToken();
         const response = await fetch(`http://${host}:3001/api/items/price?itemCode=${selectedItem.itemCode}&priceList=${priceList}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -151,14 +156,15 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
           throw new Error('Failed to fetch item price');
         }
         const priceData = await response.json();
-        const margenDecimal = parseFloat(parseFloat(margen).toFixed())
+        const margenDecimal = Number(margen) || 0;
         console.log(typeof margenDecimal, margenDecimal);
         const updatedItem = {
           name: selectedItem.name,
           itemCode: selectedItem.itemCode,
           quantity: selectedItem.quantity || 1,
           unitPrice: priceData.price,
-          U_RL_Margen: margenDecimal
+          U_RL_Margen: margenDecimal,
+          WarehouseCode: selectedItem.WarehouseCode
         };
 
         setItems((prevItems) => {
@@ -181,7 +187,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
     if (priceList !== null) {
       try {
         await delay(1000);
-        const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+        const token = getToken();
         const priceResponse = await fetch(`http://${host}:3001/api/items/price?itemCode=${item}&priceList=${priceList}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -251,7 +257,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
 
     try {
       // Extraemos el token una vez
-      const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1");
+      const token = getToken();
 
       // Actualizamos los precios de los items
       const updatedItems = await Promise.all(
@@ -307,202 +313,163 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
   };
 
 
-  return <>
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex items-center space-x-4">
-        <div className="flex-1">
-          <label htmlFor="cardCode" className="block text-sm font-medium text-gray-700">
-            Código del Cliente
-          </label>
-          <input
-              type="text"
-              id="cardCode"
-              value={cardCode}
-              className="mt-1 block w-full rounded-md bg-gray-50 border-gray-800 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              readOnly
-              required
-          />
-        </div>
-        <div className="flex-1">
-          <label htmlFor="customerName" className="block text-sm font-medium text-gray-700">
-            Nombre del Cliente
-          </label>
-          <input
-              type="text"
-              id="customerName"
-              value={customerName}
-              className="mt-1 block w-full rounded-md bg-gray-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              readOnly
-              required
-          />
-        </div>
-        <div className="flex-2">
-          <label htmlFor="margen" className="block text-sm font-medium text-gray-700">
-            Margen
-          </label>
-          <input
-              type="text"
-              id="margen"
-              value={margen}
-              className="mt-1 block w-full rounded-md bg-gray-50 border-gray-800 shadow-sm text-center focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              readOnly
-              required
-          />
-        </div>
-        <button
-            type="button"
-            onClick={() => setIsCustomerModalOpen(true)}
-            className="mt-4 px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-        >
-          Seleccionar Cliente
-        </button>
-        <DropdownMenu onOptionSelect={handleOptionSelect}></DropdownMenu>
-      </div>
-      {loading && <Loader/>}
-      <span className="flex items-center">
-      <span className="h-px flex-1 bg-gray-300"></span>
-      <span className="block text-sm font-medium text-gray-700 shrink-0 px-6 ">Articulos</span>
-      <span className="h-px flex-1 bg-gray-300"></span>
-    </span>
-      <div className="flex items-center space-x-4">
-        <div className="">
-          <button
-              type="button"
-              onClick={addItem}
-              className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
-          >
-            <Plus size={18} className="mr-2"/>
-            Añadir Articulo
-          </button>
-        </div>
-        <div className= ""></div>
-          <button
-              type="button"
-              onClick={loadItems}
-              className="mt-2 px-4 py-2 bg-orange-100 text-gray-700 rounded-md hover:bg-orange-300 flex items-center"
-          >
-            <Plus size={18} className="mr-2"/>
-            Cargar Articulo
-          </button>
-
-      </div>
-
-      <div className="mt-4 border border-gray-300 rounded-md">
-        <div className="overflow-y-auto max-h-80">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Código
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Descripción
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Cantidad
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Precio Unitario
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-            {items.map((item, index) => <tr key={index}>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.itemCode}</td>
-              <td
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-                  title={item.name} // Aquí se usa el atributo title
-
-              >
-                {item.name}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+  return (
+      <>
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-7xl bg-white p-4 mx-auto">
+          {/* Sección Cliente */}
+          <h3 className="text-md font-medium text-gray-700">Información del Cliente</h3>
+          <div className="bg-gray-10 p-4 rounded-lg border border-gray-200 mt-1">
+            <div className="flex flex-wrap gap-4">
+              <div className="w-full sm:w-[calc(50%-0.5rem)] md:flex-1 min-w-[200px]">
+                <label htmlFor="cardCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  Código del Cliente
+                </label>
                 <input
-                    type="number"
-                    value={isNaN(item.quantity) ? 0 : item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                    className="w-16 text-center border border-gray-300 rounded"
+                    type="text"
+                    id="cardCode"
+                    value={cardCode}
+                    className="block w-full rounded-md bg-blue-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    readOnly
+                    required
                 />
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <input
-                    type="number"
-                    value={isNaN(item.unitPrice) ? 0 : item.unitPrice}
-                    onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                    className="w-20 text-center border border-gray-300 rounded"
+              </div>
 
+              <div className="w-full sm:w-[calc(50%-0.5rem)] md:flex-1 min-w-[200px]">
+                <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del Cliente
+                </label>
+                <input
+                    type="text"
+                    id="customerName"
+                    value={customerName}
+                    className="block w-full rounded-md bg-blue-50 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    readOnly
+                    required
                 />
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${(item.quantity * item.unitPrice || 0).toFixed(2)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              </div>
+
+              <div className="w-[120px]">
+                <label htmlFor="margen" className="block text-sm font-medium text-gray-700 mb-1">
+                  Margen
+                </label>
+                <input
+                    type="text"
+                    id="margen"
+                    value={margen}
+                    className="block w-full rounded-md bg-blue-50 border-gray-300 shadow-sm text-center focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    readOnly
+                    required
+                />
+              </div>
+
+              <div className="w-full sm:w-auto flex items-end">
                 <button
-                    type="button" // Importante para que no actúe como "submit" por defecto
-                    onClick={(e) => handleDeleteItem(index, e)}
-                    className="px-2 py-1 bg-red-300 text-red-800 rounded-md hover:bg-red-400"
+                    type="button"
+                    onClick={() => setIsCustomerModalOpen(true)}
+                    className="mb-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition text-xs w-full sm:w-auto"
                 >
-                  Eliminar
+                  Seleccionar Cliente
                 </button>
-              </td>
-            </tr>)}
-            </tbody>
-          </table>
+              </div>
 
-        </div>
-      </div>
+              <div className="w-full sm:w-auto flex items-end">
+                <DropdownMenu onOptionSelect={handleOptionSelect} />
+              </div>
+            </div>
+          </div>
 
+          {loading && (
+              <div className="flex justify-center p-2">
+                <Loader />
+              </div>
+          )}
 
-      {error && <p className="text-red-500">{error}</p>}
+          {/* Sección Artículos */}
+          <div className="mt-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-2">
+              <h3 className="text-md font-medium text-gray-700">Artículos</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    onClick={addItem}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center transition text-xs"
+                >
+                  <Plus size={18} className="mr-2" />
+                  Añadir Artículo
+                </button>
 
-      <span className="flex items-center">
-      <span className="h-px flex-1 bg-gray-300"></span>
-    </span>
-      <div>
-        <label htmlFor="comments" className="block text-sm font-medium text-gray-700">
-          Comentarios
-        </label>
-        <textarea
-            id="comments"
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
-            className="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-        />
-      </div>
-      <button
-          type="submit"
-          className="w-full px-4 py-2 bg-blue-400 text-white rounded-md hover:bg-blue-500 disabled:bg-blue-300"
-          disabled={isSubmitting}
-      >
-        {isSubmitting ? 'Creando Orden...' : 'Crear Orden de venta'}
-      </button>
-      <ItemSelectionModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSelectItem={handleSelectItem}
-      />
-      <CustomerSelectionModal
-          isOpen={isCustomerModalOpen}
-          onClose={() => setIsCustomerModalOpen(false)}
-          onSelectCustomer={handleSelectCustomer}
-      />
+                <button
+                    type="button"
+                    onClick={loadItems}
+                    className="px-4 py-2 bg-orange-100 text-gray-700 rounded-md hover:bg-orange-300 flex items-center transition text-xs"
+                >
+                  <Plus size={18} className="mr-2" />
+                  Cargar Artículo
+                </button>
+              </div>
+            </div>
+            <ItemsTable
+                items={items}
+                onItemChange={handleItemChange}
+                onDeleteItem={handleDeleteItem}
+            />
+          </div>
 
-      <LoadItemModal
-          isOpen={isLoadModalOpen}
-          onClose={() => setIsLoadModalOpen(false)}
-          initialData={tableData}
-          onSubmit={handleloadsItems}
-      />
-    </form>
+          {error && (
+              <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">
+                {error}
+              </div>
+          )}
 
-    <ToastContainer/>
-  </>;
+          {/* Comentarios */}
+          <div className="mt-4">
+            <label htmlFor="comments" className="block text-sm font-medium text-gray-700 mb-1">
+              Comentarios
+            </label>
+            <textarea
+                id="comments"
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                placeholder="Añada comentarios adicionales aquí..."
+                rows={3}
+                className="block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            />
+          </div>
+
+          {/* Botón submit */}
+          <div className="pt-4 border-t border-gray-200">
+            <button
+                type="submit"
+                className="w-full px-4 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300 transition font-medium"
+                disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creando Orden...' : 'Crear Orden de Venta'}
+            </button>
+          </div>
+
+          {/* Modales */}
+          <ItemSelectionModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              onSelectItem={handleSelectItem}
+          />
+
+          <CustomerSelectionModal
+              isOpen={isCustomerModalOpen}
+              onClose={() => setIsCustomerModalOpen(false)}
+              onSelectCustomer={handleSelectCustomer}
+          />
+
+          <LoadItemModal
+              isOpen={isLoadModalOpen}
+              onClose={() => setIsLoadModalOpen(false)}
+              initialData={tableData}
+              onSubmit={handleloadsItems}
+          />
+        </form>
+      </>
+  );
+
 };
 
 export default SalesOrderForm;
