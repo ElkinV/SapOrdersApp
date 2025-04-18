@@ -7,9 +7,9 @@ export interface SalesOrder {
   date: string;
   comments: string;
   user: string;
-  docNum?: number;
+  docNum: number;
   series: number;
-  docStatus?: string;
+  docStatus: string;
 }
 
 export interface Customer {
@@ -59,6 +59,7 @@ export interface OrderDetails {
   docEntry: number;
   docStatus: string;
   listNum: number;
+  city: string;
 
 }
 
@@ -71,5 +72,5 @@ export interface DocumentLineItems {
   COGSCostingCode2: string;
   Price: number;
   U_RL_Margen?: number;
-  WarehouseCode: string;
+  WarehouseCode?: string;
 }

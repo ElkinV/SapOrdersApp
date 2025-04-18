@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight, User, Lock } from 'lucide-react';
+import {CONFIG} from "../../utils/utils.ts";
 
 interface LoginProps {
   onLogin: (token: string, username: string) => void;
@@ -14,19 +15,22 @@ export default function Login({ onLogin }: LoginProps) {
 
   const handleLogin = async () => {
     if (username.trim() === '' || password.trim() === '') {
-      setError('Por favor ingresa tu usuario y contraseña.');
-      return;
+      return; // Evita hacer login si faltan campos
     }
 
     try {
       setIsLoggingIn(true);
-      const response = await fetch('http://192.168.1.157:3001/api/auth/login', {
+      const response = await fetch(`http://${CONFIG.host}:3001/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
-      if (!response.ok) throw new Error('Credenciales incorrectas');
+      if (!response.ok) {
+        setError('Credenciales incorrectas');
+        setIsLoggingIn(false);
+        return;
+      }
 
       const data = await response.json();
       document.cookie = `token=${data.token}`;
@@ -35,7 +39,7 @@ export default function Login({ onLogin }: LoginProps) {
         onLogin(data.token, username);
       }, 600);
     } catch (error) {
-      setError('Inicio de sesión fallido. Verifica tus credenciales.');
+      setError('Inicio de sesión fallido. Verifica tus credenciales: '+ error);
       setIsLoggingIn(false);
     }
   };
@@ -62,12 +66,11 @@ export default function Login({ onLogin }: LoginProps) {
             RL WebAPP
           </h2>
 
-          {/* Visibilidad del estado del sistema */}
           <div className="mb-4">
             <label htmlFor="username" className="block mb-1 text-sm text-gray-600">
               Usuario
             </label>
-            <div className="flex items-center border-b border-blue-400 mb-4">
+            <div className="flex items-center border-b border-blue-400 mb-1">
               <User className="text-blue-500 mr-2" />
               <input
                   id="username"
@@ -81,13 +84,18 @@ export default function Login({ onLogin }: LoginProps) {
                   aria-describedby="userError"
               />
             </div>
+            {touched.user && username.trim() === '' && (
+                <p id="userError" className="text-red-500 text-sm mt-1">
+                  El usuario es obligatorio.
+                </p>
+            )}
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label htmlFor="password" className="block mb-1 text-sm text-gray-600">
               Contraseña
             </label>
-            <div className="flex items-center border-b border-blue-400">
+            <div className="flex items-center border-b border-blue-400 mb-1">
               <Lock className="text-blue-500 mr-2" />
               <input
                   id="password"
@@ -101,10 +109,15 @@ export default function Login({ onLogin }: LoginProps) {
                   aria-describedby="passError"
               />
             </div>
+            {touched.pass && password.trim() === '' && (
+                <p id="passError" className="text-red-500 text-sm mt-1">
+                  La contraseña es obligatoria.
+                </p>
+            )}
           </div>
 
           {error && (
-              <p id="passError" className="text-red-500 text-sm mb-4">
+              <p className="text-red-600 text-sm mb-4">
                 {error}
               </p>
           )}
