@@ -1,8 +1,9 @@
-import React, { useEffect, useState, KeyboardEvent } from 'react';
+import React, { useState, KeyboardEvent } from 'react';
 import {RefreshCw, Search, X} from 'lucide-react';
 import { Customer } from "../../types.ts";
+import {getToken, CONFIG} from "../../../utils/utils.ts";
 
-const host = "192.168.1.157";
+
 
 interface CustomerSelectionModalProps {
   isOpen: boolean;
@@ -16,9 +17,7 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({ isOpen,
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /*useEffect(() => {
-    if (isOpen) fetchCustomers();
-  }, [isOpen]);*/
+
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -26,8 +25,8 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({ isOpen,
     setCustomers([]); // Limpiar resultados anteriores
     try {
       if (!searchTerm.trim()) return;
-      const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-      const response = await fetch(`http://${host}:3001/api/customers/list/?search=${encodeURIComponent(searchTerm)}`, {
+      const token = getToken();
+      const response = await fetch(`http://${CONFIG.host}:3001/api/customers/list/?search=${encodeURIComponent(searchTerm)}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -36,8 +35,7 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({ isOpen,
       const data = await response.json();
       setCustomers(data.length ? data : []); // Asegurar que esté limpio si no hay resultados
     } catch (err) {
-      setError('Error al obtener los clientes. Verifica si el servidor está disponible.');
-      console.error('Error:', err);
+      setError(`Error al obtener los clientes. Verifica si el servidor está disponible. ${err}`);
     } finally {
       setLoading(false);
     }

@@ -1,41 +1,57 @@
 import React, { useState, useRef, useEffect } from "react";
+import ConfirmDialogModal from "./ConfirmDialogModal.tsx";
 
 interface DropdownMenuProps {
     onOptionSelect: (code: number) => void;
     initialOption?: string;
     label?: string;
+    requireConfirmation?: boolean;
 }
 
 const DropdownMenu: React.FC<DropdownMenuProps> = ({
                                                        onOptionSelect,
                                                        initialOption = "Seleccionar tipo",
-                                                       label = "Tipo de documento"
+                                                       label = "Tipo de documento",
+                                                       requireConfirmation = true,
                                                    }) => {
     const [isActive, setIsActive] = useState(false);
     const [selectedOption, setSelectedOption] = useState(initialOption);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
+    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+    const [pendingOption, setPendingOption] = useState<string | null>(null);
+
     const optionsMap: { [key: string]: number } = {
         "Pedido Cliente": 13,
         "Cotización": 83,
     };
 
-    // Visibilidad del estado: Añadir ARIA para lectores de pantalla
     const dropdownId = "document-type-dropdown";
     const labelId = "document-type-label";
 
-    const handleClickOutside = (event: MouseEvent) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-            setIsActive(false);
-        }
-    };
 
-    const handleEscapeKey = (event: KeyboardEvent) => {
-        if (event.key === "Escape") {
-            setIsActive(false);
-        }
-    };
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsActive(false);
+            }
+        };
+
+        const handleEscapeKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setIsActive(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleEscapeKey);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleEscapeKey);
+        };
+    }, []);
 
     const handleKeyDown = (event: React.KeyboardEvent) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -51,42 +67,49 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
     };
 
     const handleOptionKeyDown = (event: React.KeyboardEvent, option: string) => {
+        const menuButtons = document.querySelectorAll('[role="menuitem"]');
+        const currentIndex = Array.from(menuButtons).indexOf(event.currentTarget);
+
         if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             handleOptionClick(option);
         } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             event.preventDefault();
-            const menuButtons = document.querySelectorAll('[role="menuitem"]');
-            const currentIndex = Array.from(menuButtons).indexOf(event.currentTarget);
-            const nextIndex = event.key === "ArrowDown"
-                ? (currentIndex + 1) % menuButtons.length
-                : (currentIndex - 1 + menuButtons.length) % menuButtons.length;
+            const nextIndex =
+                event.key === "ArrowDown"
+                    ? (currentIndex + 1) % menuButtons.length
+                    : (currentIndex - 1 + menuButtons.length) % menuButtons.length;
             (menuButtons[nextIndex] as HTMLElement).focus();
-        } else if (event.key === "Tab" && !event.shiftKey && event.currentTarget === menuButtons[menuButtons.length - 1]) {
+        } else if (event.key === "Tab" && !event.shiftKey && currentIndex === menuButtons.length - 1) {
             setIsActive(false);
         }
     };
 
-    useEffect(() => {
-        document.addEventListener("mousedown", handleClickOutside);
-        document.addEventListener("keydown", handleEscapeKey);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-            document.removeEventListener("keydown", handleEscapeKey);
-        };
-    }, []);
-
     const handleOptionClick = (option: string) => {
+        if (requireConfirmation && selectedOption !== initialOption && option !== selectedOption) {
+            setPendingOption(option);
+            setIsConfirmDialogOpen(true);
+            setIsActive(false);
+        } else {
+            confirmOptionChange(option);
+        }
+    };
+
+    const confirmOptionChange = (option: string) => {
         setSelectedOption(option);
         const code = optionsMap[option];
         onOptionSelect(code);
         setIsActive(false);
-        buttonRef.current?.focus(); // Devolver el foco al botón principal
+        buttonRef.current?.focus();
+    };
+
+    const cancelOptionChange = () => {
+        setPendingOption(null);
+        setIsConfirmDialogOpen(false);
     };
 
     return (
         <div ref={dropdownRef} className="relative w-48">
-            {/* Añadir etiqueta visible para claridad */}
             <label id={labelId} className="block text-sm font-medium text-gray-700 mb-1">
                 {label}
             </label>
@@ -165,6 +188,23 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
                     </div>
                 </div>
             )}
+
+            <ConfirmDialogModal
+                isOpen={isConfirmDialogOpen}
+                onClose={cancelOptionChange}
+                onConfirm={() => {
+                    if (pendingOption) {
+                        confirmOptionChange(pendingOption);
+                        setPendingOption(null);
+                    }
+                    setIsConfirmDialogOpen(false);
+                }}
+                title="Cambiar tipo de documento"
+                message={`¿Estás seguro de cambiar de "${selectedOption}" a "${pendingOption}"? Esta acción podría afectar el flujo de trabajo actual.`}
+                confirmText="Cambiar"
+                cancelText="Cancelar"
+                confirmButtonClass="bg-yellow-600 hover:bg-yellow-700"
+            />
         </div>
     );
 };

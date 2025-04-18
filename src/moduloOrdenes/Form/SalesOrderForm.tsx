@@ -7,18 +7,17 @@ import { toast} from 'react-toastify';
 import Loader from "../components/Loader.tsx"
 import ItemSelectionModal from "./components/ItemSelectionModal.tsx";
 import LoadItemModal from "../components/loadItemsModal.tsx";
-import {host, getToken} from "../../utils/utils.ts";
+import {CONFIG, getToken} from "../../utils/utils.ts";
 import {ItemsTable} from "./components/Tableitems.tsx";
-
+import ConfirmDialogModal from "./components/ConfirmDialogModal.tsx";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface SalesOrderFormProps {
-  onCreateSalesOrder: (order: SalesOrder) => void;
   username: string | null;
 }
 
-const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, username}) => {
+const SalesOrderForm: React.FC<SalesOrderFormProps> = ({  username}) => {
   const [customerName, setCustomerName] = useState('');
   const [cardCode, setCardCode] = useState('');
   const [margen, setMargen] = useState('');
@@ -35,34 +34,64 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
   const [tableData, setTableData] = useState<string[]>(Array(3).fill(""));
 
-
+  // Estados para el ConfirmDialog
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [confirmDialogProps, setConfirmDialogProps] = useState({
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    confirmButtonClass: 'bg-red-600 hover:bg-red-700'
+  });
 
   const handleOptionSelect = (option: number) => {
     setSelectedMenuOption(option); // Actualiza la opción seleccionada
-    console.log("Opción seleccionada:", option); // Lógica adicional para usar la opción
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Si no hay cliente o no hay artículos, mostrar un mensaje de confirmación
+    if (!cardCode || items.length === 0) {
+      setConfirmDialogProps({
+        title: 'Confirmar envío',
+        message: !cardCode
+            ? 'No has seleccionado un cliente. ¿Estás seguro de continuar?'
+            : 'No has agregado artículos. ¿Estás seguro de continuar?',
+        onConfirm: () => processSubmit(),
+        confirmText: 'Continuar',
+        cancelText: 'Cancelar',
+        confirmButtonClass: 'bg-yellow-600 hover:bg-yellow-700'
+      });
+      setIsConfirmDialogOpen(true);
+    } else {
+      processSubmit();
+    }
+  };
+
+  const processSubmit = async () => {
     setIsSubmitting(true);
     setError(null);
 
     let userId: string | 'Usuario'= 'Usuario';
     try {
       const token = getToken()
-      const userResponse = await fetch(`http://${host}:3001/api/auth/get-userid?username=${username}`,{
+      const userResponse = await fetch(`http://${CONFIG.host}:3001/api/auth/get-userid?username=${username}`,{
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       if (!userResponse.ok) {
-        throw new Error('Failed to fetch USERID');
+        setError('No se pudo obtener el ID de Usuario');
+        toast.error('Error al obtener el ID de Usuario');
+        setIsSubmitting(false);
+        return;
       }
       const userData = await userResponse.json();
       userId = userData.USERID;
     } catch (err) {
       if( typeof err === "object" && err && "message" in err && typeof err.message === "string"){
-        console.error('Error fetching USERID:', err);
         setError(err.message);
         toast.error(`Error al obtener el USERID`);
         setIsSubmitting(false);
@@ -78,12 +107,14 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
       total: items.reduce((sum, item) => sum + item.quantity * (item.unitPrice || 0), 0),
       comments: comments,
       user: userId,
-      series:selectedMenuOption ?? 0
+      series:selectedMenuOption ?? 0,
+      docNum:0,
+      docStatus:""
     };
 
     try {
       const token = getToken()
-      const response = await fetch(`http://${host}:3001/api/orders/`, {
+      const response = await fetch(`http://${CONFIG.host}:3001/api/orders/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,22 +125,34 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
 
       if (!response.ok) {
         const errorDetails = await response.json();
-        const errorMessage = errorDetails.error?.message?.value || 'Failed to create order';
-        throw new Error(errorMessage);
+        const errorMessage = errorDetails.error?.message?.value || 'Error al crear la orden';
+        setError(errorMessage);
+        toast.error(errorMessage);
+        return;
       }
 
-      const result = await response.json();
       toast.success(`Orden de venta creada correctamente`);
 
-      onCreateSalesOrder(newOrder);
-      setCustomerName('');
-      setMargen('');
-      setCardCode('');
-      setItems([]);
+      // Mostrar diálogo de confirmación después de crear la orden
+      setConfirmDialogProps({
+        title: 'Orden creada correctamente',
+        message: '¿Deseas crear una nueva orden?',
+        onConfirm: () => {
+          setCustomerName('');
+          setMargen('');
+          setCardCode('');
+          setItems([]);
+          setComments('');
+        },
+        confirmText: 'Nueva orden',
+        cancelText: 'Cerrar',
+        confirmButtonClass: 'bg-blue-600 hover:bg-blue-700'
+      });
+      setIsConfirmDialogOpen(true);
 
     } catch (err) {
       if( typeof err === "object" && err && "message" in err && typeof err.message === "string"){
-        console.error('Error creating order:', err);
+        toast.error('Error Creando Orden, intente nuevamente: '+ err);
         setError(err.message);
         toast.error(`Error al crear la orden`);
       }
@@ -136,7 +179,6 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
     setCurrentEditIndex(items.length);
     setIsModalOpen(true);
     setLoading(false);
-
   };
 
   const loadItems = async () => {
@@ -147,17 +189,17 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
     if (priceList !== null) {
       try {
         const token = getToken();
-        const response = await fetch(`http://${host}:3001/api/items/price?itemCode=${selectedItem.itemCode}&priceList=${priceList}`, {
+        const response = await fetch(`http://${CONFIG.host}:3001/api/items/price?itemCode=${selectedItem.itemCode}&priceList=${priceList}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         if (!response.ok) {
-          throw new Error('Failed to fetch item price');
+          toast.error('No se pudo obtener el precio del artículo.');
+          return;
         }
         const priceData = await response.json();
         const margenDecimal = Number(margen) || 0;
-        console.log(typeof margenDecimal, margenDecimal);
         const updatedItem = {
           name: selectedItem.name,
           itemCode: selectedItem.itemCode,
@@ -177,7 +219,6 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
         });
         setCurrentEditIndex(null);
       } catch (error) {
-        console.error('Error fetching item price:', error);
         toast.error('Error al obtener el precio del artículo.');
       }
     }
@@ -188,22 +229,24 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
       try {
         await delay(1000);
         const token = getToken();
-        const priceResponse = await fetch(`http://${host}:3001/api/items/price?itemCode=${item}&priceList=${priceList}`, {
+        const priceResponse = await fetch(`http://${CONFIG.host}:3001/api/items/price?itemCode=${item}&priceList=${priceList}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        const itemResponse = await fetch(`http://${host}:3001/api/items/?search=${encodeURIComponent(item)}`, {
+        const itemResponse = await fetch(`http://${CONFIG.host}:3001/api/items/?search=${encodeURIComponent(item)}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         // Validar ambas respuestas
         if (!priceResponse.ok) {
-          throw new Error(`Error al obtener el precio del artículo: ${priceResponse.statusText}`);
+          toast.error(`Error al obtener el precio del artículo: ${priceResponse.statusText}`);
+          return;
         }
         if (!itemResponse.ok) {
-          throw new Error(`Error al obtener los datos del artículo: ${itemResponse.statusText}`);
+          toast.error(`Error al obtener los datos del artículo: ${itemResponse.statusText}`);
+          return;
         }
 
         // Parsear los datos de las respuestas
@@ -212,10 +255,10 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
 
         // Validar los datos obtenidos
         if (!priceData || typeof priceData.price !== "number") {
-          throw new Error("Los datos del precio no son válidos.");
+          toast.error("Los datos del precio no son válidos.");
         }
         if (!itemData || !itemData[0] || typeof itemData[0].name !== "string") {
-          throw new Error("Los datos del artículo no son válidos.");
+          toast.error("Los datos del artículo no son válidos.");
         }
 
         // Crear el objeto actualizado
@@ -239,14 +282,29 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
         // Restablecer el índice de edición actual
         setCurrentEditIndex(null);
       } catch (error) {
-        console.error("Error fetching item price or data:", error);
         toast.error("Error al obtener los datos del artículo o su precio.");
       }
     }
-
   }
 
   const handleSelectCustomer = async (selectedCustomer: Customer) => {
+    // Si ya hay un cliente seleccionado y hay artículos, mostrar confirmación
+    if (cardCode && items.length > 0) {
+      setConfirmDialogProps({
+        title: 'Cambiar cliente',
+        message: 'Cambiar el cliente podría modificar los precios de los artículos ya agregados. ¿Deseas continuar?',
+        onConfirm: () => updateCustomer(selectedCustomer),
+        confirmText: 'Continuar',
+        cancelText: 'Cancelar',
+        confirmButtonClass: 'bg-yellow-600 hover:bg-yellow-700'
+      });
+      setIsConfirmDialogOpen(true);
+    } else {
+      updateCustomer(selectedCustomer);
+    }
+  };
+
+  const updateCustomer = async (selectedCustomer: Customer) => {
     setCardCode(selectedCustomer.id);
     setCustomerName(selectedCustomer.name);
     setPriceList(selectedCustomer.priceList);
@@ -264,7 +322,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
           items.map(async (item) => {
             try {
               const response = await fetch(
-                  `http://${host}:3001/api/items/price?itemCode=${item.itemCode}&priceList=${selectedCustomer.priceList}`,
+                  `http://${CONFIG.host}:3001/api/items/price?itemCode=${item.itemCode}&priceList=${selectedCustomer.priceList}`,
                   {
                     headers: {
                       Authorization: `Bearer ${token}`,
@@ -273,7 +331,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
               );
 
               if (!response.ok) {
-                console.error(`Failed to fetch price for item ${item.itemCode}: ${response.statusText}`);
+                toast.error(`Error al traer el precio del item ${item.itemCode}: ${response.statusText}`);
                 return item; // Retornamos el item sin cambios en caso de error
               }
 
@@ -283,7 +341,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
                 unitPrice: priceData.price,
               };
             } catch (error) {
-              console.error(`Error fetching price for item ${item.itemCode}:`, error);
+              setError(`Error al traer el precio del item ${item.itemCode}: `+ error);
               return item; // Retornamos el item sin cambios en caso de error
             }
           })
@@ -292,26 +350,35 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
       // Actualizamos el estado con los nuevos precios
       setItems(updatedItems);
     } catch (error) {
-      console.error("Error updating items prices:", error);
+      toast.error("Hubo un error al actualizar los precios, verifique los items: "+  error);
     }
   };
 
-
   const handleDeleteItem = (index: number, e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault(); // Prevenir la acción predeterminada (enviar formulario)
-    const updatedItems = items.filter((_, i) => i !== index);
-    setItems(updatedItems);
+
+    // Mostrar confirmación antes de eliminar
+    setConfirmDialogProps({
+      title: 'Eliminar artículo',
+      message: '¿Estás seguro de que deseas eliminar este artículo?',
+      onConfirm: () => {
+        const updatedItems = items.filter((_, i) => i !== index);
+        setItems(updatedItems);
+      },
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      confirmButtonClass: 'bg-red-600 hover:bg-red-700'
+    });
+    setIsConfirmDialogOpen(true);
   };
 
   const handleloadsItems = async (data: string[]) => {
     setTableData(data); // Actualiza los datos en el padre
-    console.log("Datos guardados:", data);
 
     for (let i = 0; i < data.length; i++) {
       await handleChargeItems(data[i]);
     }
   };
-
 
   return (
       <>
@@ -466,10 +533,21 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onCreateSalesOrder, use
               initialData={tableData}
               onSubmit={handleloadsItems}
           />
+
+          {/* Diálogo de confirmación */}
+          <ConfirmDialogModal
+              isOpen={isConfirmDialogOpen}
+              onClose={() => setIsConfirmDialogOpen(false)}
+              onConfirm={confirmDialogProps.onConfirm}
+              title={confirmDialogProps.title}
+              message={confirmDialogProps.message}
+              confirmText={confirmDialogProps.confirmText}
+              cancelText={confirmDialogProps.cancelText}
+              confirmButtonClass={confirmDialogProps.confirmButtonClass}
+          />
         </form>
       </>
   );
-
 };
 
 export default SalesOrderForm;

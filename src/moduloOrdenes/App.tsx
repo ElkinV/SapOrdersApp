@@ -6,16 +6,13 @@ import {
 } from 'lucide-react';
 import SalesOrderForm from './Form/SalesOrderForm.tsx';
 import SalesOrderList from './List/components/SalesOrderList.tsx';
-import { SalesOrder } from './types.ts';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ChangePasswordModal from './components/ChangePasswordModal.tsx';
 import {getToken} from "../utils/utils.ts";
+import {CONFIG} from "../utils/utils.ts";
 
-const CONFIG = {
-  host: '192.168.1.157',
-  apiEndpoint: 'http://192.168.1.157:3001'
-};
+
 
 function App() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -25,9 +22,7 @@ function App() {
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
-  const [salesOrders, setSalesOrders] = useState<unknown[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [refreshList, setRefreshList] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isChangePassOpen, setIsChangePassOpen] = useState(false);
@@ -41,17 +36,16 @@ function App() {
       setToken(savedToken);
       setUsername(savedUsername);
       setActiveTab('create');
-      verifyToken(savedToken);
       fetchUserId(savedUsername, savedToken);
     }
 
-    // Verificar el token cada 5 minutos
+    // Verificar el token cada 12 horas
     const tokenCheckInterval = setInterval(() => {
       const currentToken = getToken()
       if (currentToken) {
         verifyToken(currentToken);
       }
-    }, 12 * 60 * 1000); // 5 minutos
+    }, 12 * 60 * 1000); // Cada 12 horas
 
     return () => clearInterval(tokenCheckInterval);
   }, []);
@@ -59,7 +53,7 @@ function App() {
   const verifyToken = async (tokenToVerify: string) => {
     try {
       const response = await fetch(`${CONFIG.apiEndpoint}/api/auth/verify-token`, {
-        method: 'GET',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tokenToVerify }),
       });
@@ -72,7 +66,7 @@ function App() {
 
       return true;
     } catch (error) {
-      console.error('Error verificando token:', error);
+      toast.error('Error verificando token: '+ error);
       return false;
     }
   };
@@ -108,12 +102,13 @@ function App() {
         return;
       }
 
-      if (!response.ok) throw new Error(`Error al obtener información de usuario: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Error al obtener información de usuario: ${response.status}`);
+      }
 
       const userData = await response.json();
       setUserId(userData.USERID);
     } catch (error) {
-      console.error('Error fetching userId:', error);
       setError('No se pudo cargar la información del usuario. Por favor, intente de nuevo.');
       toast.error('Error al cargar datos de usuario');
     } finally {
@@ -140,9 +135,7 @@ function App() {
     };
   }, [token]);
 
-  const handleCreateSalesOrder = (newOrder: SalesOrder) => {
-    setSalesOrders((prevOrders) => [...prevOrders, { ...newOrder, id: Date.now() }]);
-  };
+
 
   const handleLogin = async (token: string, username: string) => {
     setToken(token);
@@ -208,17 +201,17 @@ function App() {
                   {/* Botón cerrar (solo móvil) */}
                   <div className="md:hidden flex justify-end mb-4">
                     <button onClick={() => setSidebarOpen(false)}>
-                      <X size={20} />
+                      <X size={20}/>
                     </button>
                   </div>
 
                   <div className="flex items-center mb-6">
-                    <img src="/favicon.png" alt="Logo" width="32" height="32" className="mr-2" />
+                    <img src="/favicon.png" alt="Logo" width="32" height="32" className="mr-2"/>
                     <span className="font-bold text-gray-800">RL WebApp</span>
                   </div>
 
                   <div className="mb-6 font-medium text-gray-700 flex items-center p-3 bg-gray-50 rounded-md">
-                    <UserRound size={18} className="mr-2" />
+                    <UserRound size={18} className="mr-2"/>
                     <div className="text-sm">{username || 'Usuario'}</div>
                   </div>
 
@@ -231,33 +224,33 @@ function App() {
                             onClick={() => setDropdownOpen(!dropdownOpen)}
                         >
                     <span className="flex items-center">
-                      <Package className="w-4 h-4 mr-2" />
+                      <Package className="w-4 h-4 mr-2"/>
                       Órdenes de Venta
                     </span>
-                          {dropdownOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                          {dropdownOpen ? <ChevronUp size={15}/> : <ChevronDown size={15}/>}
                         </button>
 
                         <div className={`pl-6 mt-1 space-y-1 ${dropdownOpen ? 'block' : 'hidden'}`}>
                           <button
-                              className={`block w-full text-left px-4 py-2 rounded flex items-center transition ${
+                              className={`w-full text-left px-4 py-2 rounded flex items-center transition ${
                                   activeTab === 'create'
                                       ? 'bg-blue-100 text-blue-700 font-medium'
                                       : 'text-gray-700 hover:bg-gray-100'
                               }`}
                               onClick={() => setActiveTab('create')}
                           >
-                            <Plus size={15} className="mr-2" />
+                            <Plus size={15} className="mr-2"/>
                             Crear
                           </button>
                           <button
-                              className={`block w-full text-left px-4 py-2 rounded flex items-center transition ${
+                              className={`w-full text-left px-4 py-2 rounded flex items-center transition ${
                                   activeTab === 'view'
                                       ? 'bg-blue-100 text-blue-700 font-medium'
                                       : 'text-gray-700 hover:bg-gray-100'
                               }`}
                               onClick={() => setActiveTab('view')}
                           >
-                            <List size={15} className="mr-2" />
+                            <List size={15} className="mr-2"/>
                             Listado
                           </button>
                         </div>
@@ -266,57 +259,59 @@ function App() {
                   </nav>
 
                   {/* Configuración al final */}
-                  <div className="relative mt-6">
-                    <button
-                        onClick={() => setSettingsOpen(!settingsOpen)}
-                        className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition"
-                    >
-                <span className="flex items-center">
-                  <Settings size={16} className="mr-2" />
-                  Configuración
-                </span>
-                      {settingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
+                  <div className="absolute bottom-1 w-full left-0 px-4">
+                    <div className="relative">
+                      <button
+                          onClick={() => setSettingsOpen(!settingsOpen)}
+                          className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition bg-white"
+                      >
+      <span className="flex items-center">
+        <Settings size={16} className="mr-2"/>
+        Configuración
+      </span>
+                        {settingsOpen ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                      </button>
 
-                    {settingsOpen && (
-                        <div className="absolute bottom-12 left-4 w-64 bg-white rounded-lg shadow-lg z-50 border border-gray-200">
-                          <div className="px-4 py-3 border-b border-gray-100">
-                            <p className="text-sm font-medium text-gray-900">{username}</p>
+                      {settingsOpen && (
+                          <div
+                              className="absolute bottom-full mb-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                            <div className="px-4 py-3 border-b border-gray-100">
+                              <p className="text-sm font-medium text-gray-900">{username}</p>
+                            </div>
+                            <ul className="py-1 text-sm text-gray-700">
+                              <li>
+                                <button
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 transition"
+                                    onClick={() => {
+                                      setIsChangePassOpen(true);
+                                      setSettingsOpen(false);
+                                    }}
+                                >
+                                  Cambiar Clave
+                                </button>
+                              </li>
+                              <li>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-100 transition"
+                                >
+                                  Cerrar sesión
+                                </button>
+                              </li>
+                            </ul>
                           </div>
-
-                          <ul className="py-1 text-sm text-gray-700">
-                            <li>
-                              <button
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition"
-                                  onClick={() => {
-                                    setIsChangePassOpen(true);
-                                    setSettingsOpen(false);
-                                  }}
-                              >
-                                Cambiar Clave
-                              </button>
-                            </li>
-                            <li>
-                              <button
-                                  onClick={handleLogout}
-                                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-100 transition"
-                              >
-                                Cerrar sesión
-                              </button>
-                            </li>
-                          </ul>
-                        </div>
-                    )}
+                      )}
+                    </div>
                   </div>
 
-                  {isChangePassOpen && (
-                      <ChangePasswordModal
-                          username={username}
-                          onClose={() => setIsChangePassOpen(false)}
-                      />
-                  )}
-                </aside>
 
+                </aside>
+                {isChangePassOpen && (
+                    <ChangePasswordModal
+                        username={username}
+                        onClose={() => setIsChangePassOpen(false)}
+                    />
+                )}
                 {/* Fondo oscuro para sidebar móvil */}
                 {sidebarOpen && (
                     <div
@@ -356,11 +351,9 @@ function App() {
                   <div className="bg-white shadow-md rounded-lg overflow-hidden">
                     <div className="p-6">
                       {activeTab === 'create' ? (
-                          <SalesOrderForm onCreateSalesOrder={handleCreateSalesOrder} username={username} />
+                          <SalesOrderForm  username={username} />
                       ) : (
                           <SalesOrderList
-                              salesOrders={salesOrders}
-                              username={username}
                               userId={userId}
                               refresh={refreshList}
                               onModalClose={() => setRefreshList(prev => prev + 1)}

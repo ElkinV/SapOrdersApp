@@ -2,7 +2,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import {OrderDetails} from "../types.ts";
 
-export const generatePDF = (details: OrderDetails[] | null, orderId?: number): void => {
+export const  generatePDF = async (details: OrderDetails[] | null, orderId?: number): Promise<void> => {
     if (!details?.length) return;
 
     const doc = new jsPDF('p', 'mm', 'letter');
@@ -168,7 +168,7 @@ export const generatePDF = (details: OrderDetails[] | null, orderId?: number): v
         [`Fecha del documento: ${details[0].docDate}`, "Total bruto", totalBruto.toLocaleString("es-CO", { minimumFractionDigits: 2 })],
         [`Observaciones: "${details[0].comments}"`,"Total descuento", "0,00"],
         ["","Total venta neta", totalBruto.toLocaleString("es-CO", { minimumFractionDigits: 2 })],
-        ["","Total IVA", totalIVA.toLocaleString("es-CO", { minimumFractionDigits: 2 })],
+        ["","Total IVA", totalIVA.toLocaleString()],
         ["","Total pedido", totalPedido.toLocaleString("es-CO", { minimumFractionDigits: 2 })]
     ];
 
@@ -201,7 +201,7 @@ export const generatePDF = (details: OrderDetails[] | null, orderId?: number): v
                 halign: "right"
             },
         },
-        didParseCell: function(data) {
+        didParseCell: function(data: { column: { index: number; }; row: { index: number; }; cell: { rowSpan: number; styles: { valign: string; }; skip: boolean; }; }) {
             if (data.column.index === 0) {
                 if (data.row.index === 1) { // Primera fila del grupo a combinar
                     data.cell.rowSpan = 4;

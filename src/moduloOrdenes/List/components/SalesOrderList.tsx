@@ -2,8 +2,8 @@ import React, { useEffect, useState, ChangeEvent } from 'react';
 import { SalesOrder } from '../../types.ts';
 import { CheckCircle, Clock4, FileText, Hash, UserCircle, Search } from "lucide-react";
 import DetailsModal from "./detailsModal.tsx";
+import {CONFIG, getToken} from "../../../utils/utils.ts"
 
-const host = "192.168.1.157";
 
 interface SalesOrderListProps {
   userId: string | null;
@@ -39,8 +39,8 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ userId,  refresh }) => 
   const fetchOrders = async () => {
     if (!userId) return;
     try {
-      const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1");
-      const response = await fetch(`http://${host}:3001/api/orders/list?userId=${userId}`, {
+      const token = getToken()
+      const response = await fetch(`http://${CONFIG.host}:3001/api/orders/list?userId=${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -48,7 +48,6 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ userId,  refresh }) => 
       const data = await response.json();
       setAllSalesOrders(data);
     } catch (error) {
-      console.error('Error fetching orders:', error);
     }
   };
 
@@ -119,7 +118,11 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ userId,  refresh }) => 
     }
 
     const grouped: { [key: string]: SalesOrder[] } = filtered.reduce((acc, order) => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
       acc[order.docStatus] = acc[order.docStatus] || [];
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
       acc[order.docStatus].push(order);
       return acc;
     }, {});

@@ -1,46 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-/**
- * Componente de diálogo de confirmación modal
- *
- * @param {Object} props - Propiedades del componente
- * @param {boolean} props.isOpen - Controla si el diálogo está abierto o cerrado
- * @param {Function} props.onClose - Función a ejecutar al cerrar el diálogo
- * @param {Function} props.onConfirm - Función a ejecutar al confirmar la acción
- * @param {string} props.title - Título del diálogo
- * @param {string} props.message - Mensaje principal del diálogo
- * @param {string} [props.confirmText="Confirmar"] - Texto del botón de confirmación
- * @param {string} [props.cancelText="Cancelar"] - Texto del botón de cancelación
- * @param {string} [props.confirmButtonClass="bg-red-600"] - Clase CSS para el botón de confirmación
- */
-const ConfirmDialog = ({
-                           isOpen,
-                           onClose,
-                           onConfirm,
-                           title,
-                           message,
-                           confirmText = "Confirmar",
-                           cancelText = "Cancelar",
-                           confirmButtonClass = "bg-red-600 hover:bg-red-700"
-                       }) => {
-    if (!isOpen) return null;
+interface ConfirmDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    confirmButtonClass?: string;
+}
 
-    // Manejador para cerrar el modal al hacer clic fuera de él
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
-    };
+const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+                                                         isOpen,
+                                                         onClose,
+                                                         onConfirm,
+                                                         title,
+                                                         message,
+                                                         confirmText = "Confirmar",
+                                                         cancelText = "Cancelar",
+                                                         confirmButtonClass = "bg-red-600 hover:bg-red-700"
+                                                     }) => {
 
-    // Prevenir que el evento de clic se propague al backdrop
-    const handleDialogClick = (e) => {
-        e.stopPropagation();
-    };
-
-    // Manejar tecla Escape para cerrar el modal
-    React.useEffect(() => {
-        const handleEscape = (e) => {
+    // Manejador para cerrar con tecla Escape
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 onClose();
             }
@@ -48,7 +33,6 @@ const ConfirmDialog = ({
 
         if (isOpen) {
             document.addEventListener('keydown', handleEscape);
-            // Prevenir scroll en el fondo cuando el modal está abierto
             document.body.style.overflow = 'hidden';
         }
 
@@ -58,15 +42,24 @@ const ConfirmDialog = ({
         };
     }, [isOpen, onClose]);
 
-    // Enfocar el botón cancelar cuando se abre el modal (para mejor accesibilidad)
-    React.useEffect(() => {
+    // Enfocar botón cancelar al abrir
+    useEffect(() => {
         if (isOpen) {
             const cancelButton = document.getElementById('cancel-button');
-            if (cancelButton) {
-                cancelButton.focus();
-            }
+            cancelButton?.focus();
         }
     }, [isOpen]);
+
+    // Si no está abierto, no renderiza (pero los hooks ya se ejecutaron)
+    if (!isOpen) return null;
+
+    const handleBackdropClick = (e: React.MouseEvent) => {
+        if (e.target === e.currentTarget) onClose();
+    };
+
+    const handleDialogClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+    };
 
     return (
         <div
@@ -94,10 +87,7 @@ const ConfirmDialog = ({
                 </div>
 
                 <div className="p-6">
-                    <div className="text-sm text-gray-600">
-                        {message}
-                    </div>
-
+                    <div className="text-sm text-gray-600">{message}</div>
                     <div className="mt-6 flex justify-end space-x-3">
                         <button
                             id="cancel-button"

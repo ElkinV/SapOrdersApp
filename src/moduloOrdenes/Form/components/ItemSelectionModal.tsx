@@ -2,8 +2,9 @@ import React, { useState, KeyboardEvent } from 'react';
 import { X, RefreshCw, Search } from 'lucide-react';
 import Loader from "../../components/Loader.tsx"
 import { Item } from "../../types.ts"
+import {getToken, CONFIG} from "../../../utils/utils.ts";
+import {toast} from "react-toastify";
 
-const host = "192.168.1.157";
 
 interface ItemSelectionModalProps {
   isOpen: boolean;
@@ -22,9 +23,9 @@ const ItemSelectionModal: React.FC<ItemSelectionModalProps> = ({ isOpen, onClose
     setLoading(true);
     setError(null);
     try {
-      const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+      const token = getToken()
 
-      const response = await fetch(`http://${host}:3001/api/items/?search=${encodeURIComponent(searchTerm)}`, {
+      const response = await fetch(`http://${CONFIG.host}:3001/api/items/?search=${encodeURIComponent(searchTerm)}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -32,23 +33,22 @@ const ItemSelectionModal: React.FC<ItemSelectionModalProps> = ({ isOpen, onClose
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('No autorizado. Inicia sesión nuevamente.');
+          toast.error('No autorizado. Inicia sesión nuevamente.');
         }
-        throw new Error('No se pudieron obtener los artículos.');
+        toast.error('No se pudieron obtener los artículos.');
       }
 
       const data = await response.json();
       setItems(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al obtener los artículos.');
-      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') fetchItems();
+  const handleKeyDown = async(e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter')  await fetchItems();
   };
 
   if (!isOpen) return null;

@@ -148,7 +148,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ username, onC
                         </button>
                         <button
                             type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:bg-blue-300"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:bg-blue-400"
                             disabled={!oldPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
                         >
                             Confirmar Cambio

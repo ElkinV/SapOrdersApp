@@ -1,5 +1,5 @@
 import React from 'react';
-import { Item } from '../types.ts';
+import { Item } from '../../types.ts';
 
 interface ItemsTableProps {
     items: Item[];

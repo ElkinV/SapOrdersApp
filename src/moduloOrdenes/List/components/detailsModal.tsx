@@ -94,7 +94,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
             setDetails(data || []);
             setDocStatus(data[0]?.docStatus === "C");
         } catch (err) {
-            console.error("Error fetching orders:", err);
+
             setError(
                 `Failed to fetch details: ${
                     err instanceof Error ? err.message : "Unknown error"
@@ -109,9 +109,10 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
         fetchDetails();
     }, [isOpen, selectedCardCode]);
 
-    const handleExportPDF = useCallback(() => {
-        generatePDF(details, selectedCardCode);
+    const handleExportPDF = useCallback(async () => {
+        await generatePDF(details, selectedCardCode);
     }, [details, selectedCardCode]);
+
 
     const handleConfirmCancel = () => {
         setIsConfirmModalOpen(true);
@@ -125,7 +126,6 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
             toast.success("Orden cancelada correctamente ✅");
             onClose();
         } catch (error) {
-            console.error(error);
             toast.error("Error al cancelar la orden ❌");
         } finally {
             setLoadingCancel(false);
@@ -151,7 +151,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
                                 </h2>
                                 <span
                                     className={`text-sm font-semibold w-fit px-2 py-1 rounded-full ${
-                                        docStatus === "Cerrado"
+                                        !docStatus
                                             ? "bg-gray-200 text-gray-600"
                                             : "bg-green-200 text-green-800"
                                     }`}
@@ -293,7 +293,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
                                                 {label}
                                             </td>
                                             <td colSpan={3} className="px-4 py-4 font-medium text-gray-900 text-right">
-                                                ${formatNumberWithPoints(value?.toFixed(2) || "0.00")}
+                                                ${formatNumberWithPoints((parseFloat(value as string).toFixed(2) || "0.00"))}
                                             </td>
                                         </tr>
                                     ))}

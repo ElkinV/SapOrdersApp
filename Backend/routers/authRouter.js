@@ -35,7 +35,7 @@ authRouter.post('/login',async (req, res) => {
             password: encryptedPassword,
         }
 
-        tokenjwt= jwt.sign(user , jwtKey , {algorithm: 'HS256', expiresIn: '48h'});
+        tokenjwt= jwt.sign(user , jwtKey , {algorithm: 'HS256', expiresIn: '12h'});
 
         if (username === credentials.Username && password === decryptedPassword) {
             res.json({encryptedPassword: encryptedPassword,token: tokenjwt });
@@ -121,8 +121,9 @@ authRouter.post('/signup', async (req, res) => {
     })
 })
 
-authRouter.get('verify-token', async (req, res) => {
+authRouter.post('/verify-token', async (req, res) => {
     const {tokenToVerify} = req.body;
+    console.log("TOKEN", tokenToVerify);
 
     jwt.verify(tokenToVerify, jwtKey, (err,token) => {
         if(err){
